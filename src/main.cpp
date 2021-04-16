@@ -7,8 +7,8 @@
 using namespace std;
 
 int main(int argc, const char *argv[]) {
-    ifstream input;
     ofstream output;
+    Reader reader;
     int arg_cnt;
     int src, target = 3;
     bool lex = false;
@@ -30,7 +30,7 @@ int main(int argc, const char *argv[]) {
         } else {
             arg_cnt = 1;
             string filename = argv[0];
-            input.open(filename);
+            reader = Reader(filename);
             if (filename.substr(filename.size() - 2, 2) == ".c")src = 0;
             else if (filename.substr(filename.size() - 7, 7) == ".eeyore")src = 1;
             else if (filename.substr(filename.size() - 7, 7) == ".tigger")src = 2;
@@ -42,13 +42,14 @@ int main(int argc, const char *argv[]) {
     }
     if (lex) {
         printf("start lexing from stdin\n");
-        auto lexer = Lexer(std::cin);
+        auto lexer = Lexer(reader);
         auto token = lexer.nextToken();
         while (token != Token::End) {
             std::cout << lexer.toString(token);
             if (token == Token::Error)return 1;
             token = lexer.nextToken();
         }
+        puts("");
     } else {
         printf("compile from stage %d to %d.\n", src, target);
         // todo

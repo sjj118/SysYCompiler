@@ -6,11 +6,12 @@
 #define SYSYCOMPILER_LEXER_H
 
 #include <istream>
+#include "reader.h"
 #include "token.h"
 
 class Lexer {
 private:
-    std::istream &in;
+    Reader &in;
     std::string id_val_;
     int int_val_;
     Keyword key_val_;
@@ -27,8 +28,10 @@ private:
 
     Token handleOperator();
 
+    Token logError(const std::string &msg) const;
+
 public:
-    explicit Lexer(std::istream &in) : in(in) {}
+    explicit Lexer(Reader &in) : in(in) {}
 
     Token nextToken();
 

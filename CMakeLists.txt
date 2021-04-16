@@ -3,4 +3,4 @@ project(SysYCompiler)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(SysYCompiler src/main.cpp src/front/lexer.cpp src/front/lexer.h src/front/token.h)
+add_executable(SysYCompiler src/main.cpp src/front/lexer.cpp src/front/lexer.h src/front/token.h src/front/reader.h)
