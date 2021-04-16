@@ -1,13 +1,17 @@
-#include<iostream>
-#include<cstdio>
-#include<cstring>
+#include <iostream>
+#include <fstream>
+#include <cstdio>
+#include <cstring>
+#include "front/lexer.h"
 
 using namespace std;
 
 int main(int argc, const char *argv[]) {
-    string input, output;
+    ifstream input;
+    ofstream output;
     int arg_cnt;
     int src, target = 3;
+    bool lex = false;
     for (argc--, argv++; argc; argc -= arg_cnt, argv += arg_cnt) {
         if (strcmp(argv[0], "-S") == 0) {
             arg_cnt = 1;
@@ -19,20 +23,35 @@ int main(int argc, const char *argv[]) {
             arg_cnt = 1;
         } else if (strcmp(argv[0], "-o") == 0) {
             arg_cnt = 2;
-            output = argv[1];
+            output.open(argv[1]);
+        } else if (strcmp(argv[0], "-l") == 0) {
+            arg_cnt = 1;
+            lex = true;
         } else {
             arg_cnt = 1;
-            input = argv[0];
-            if (input.substr(input.size() - 2, 2) == ".c")src = 0;
-            else if (input.substr(input.size() - 7, 7) == ".eeyore")src = 1;
-            else if (input.substr(input.size() - 7, 7) == ".tigger")src = 2;
+            string filename = argv[0];
+            input.open(filename);
+            if (filename.substr(filename.size() - 2, 2) == ".c")src = 0;
+            else if (filename.substr(filename.size() - 7, 7) == ".eeyore")src = 1;
+            else if (filename.substr(filename.size() - 7, 7) == ".tigger")src = 2;
             else {
                 cerr << "[error] unknown input file type.\n";
                 return 1;
             }
         }
     }
-    printf("compile from stage %d to %d.\n", src, target);
-    printf("input: %s  output: %s\n", input.c_str(), output.c_str());
+    if (lex) {
+        printf("start lexing from stdin\n");
+        auto lexer = Lexer(std::cin);
+        auto token = lexer.nextToken();
+        while (token != Token::End) {
+            std::cout << lexer.toString(token);
+            if (token == Token::Error)return 1;
+            token = lexer.nextToken();
+        }
+    } else {
+        printf("compile from stage %d to %d.\n", src, target);
+        // todo
+    }
     return 0;
 }
