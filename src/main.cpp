@@ -2,11 +2,14 @@
 #include <fstream>
 #include <cstdio>
 #include <cstring>
-#include "front/lexer.h"
+
+extern int yyparse();
 
 using namespace std;
 
 int main(int argc, const char *argv[]) {
+    yyparse();
+    /*
     ofstream output;
     Reader reader;
     int arg_cnt;
@@ -43,16 +46,15 @@ int main(int argc, const char *argv[]) {
     if (lex) {
         printf("start lexing from stdin\n");
         auto lexer = Lexer(reader);
-        auto token = lexer.nextToken();
-        while (token != Token::End) {
-            std::cout << lexer.toString(token);
-            if (token == Token::Error)return 1;
-            token = lexer.nextToken();
+        while (lexer.token() != Token::End) {
+            std::cout << lexer.toString(lexer.token());
+            if (lexer.token() == Token::Error)return 1;
+            lexer.next();
         }
         puts("");
     } else {
         printf("compile from stage %d to %d.\n", src, target);
         // todo
-    }
+    }*/
     return 0;
 }
