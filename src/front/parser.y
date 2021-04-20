@@ -1,6 +1,9 @@
+%code requires {
+#include <string>
+#include "ast.h"
+}
 %{
 #include <cstdio>
-#include <string>
 #include <cstdlib>
 extern int yydebug;
 
@@ -18,18 +21,20 @@ void yyerror(const char *s) {
 
 %union{
     std::string *ident;
+    AST *ast;
     int num;
+    int op;
 };
 %token <num> INT_CONST
 %token <ident> IDENT
 %token CONST INT VOID IF ELSE WHILE BREAK CONTINUE RETURN
-%token ADD SUB MUL DIV MOD EQ NEQ LESS GREAT LESSEQ GREATEQ LNOT LAND LOR ASSIGN
-%type <num> Number
+%token <op> ADD SUB MUL DIV MOD EQ NEQ LESS GREAT LESSEQ GREATEQ LNOT LAND LOR ASSIGN
+%type <ast> Number Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp ConstExp
 
 %nonassoc IFX
 %nonassoc ELSE
 
-%start PrimaryExp
+%start Stmt
 %%
 Program: CompUnit           {}
        | Program CompUnit   {}
@@ -97,7 +102,7 @@ BlockItem: Decl {}
          ;
 Stmt: LVal ASSIGN Exp ';'               {}
     | ';'                               {}
-    | Exp ';'                           {}
+    | Exp ';'                           { printf("%d\n", $1->eval(nullptr)); }
     | Block                             {}
     | IF '(' Cond ')' Stmt %prec IFX    {}
     | IF '(' Cond ')' Stmt ELSE Stmt    {}
@@ -107,7 +112,7 @@ Stmt: LVal ASSIGN Exp ';'               {}
     | RETURN ';'                        {}
     | RETURN Exp ';'                    {}
     ;
-Exp: AddExp     {}
+Exp: AddExp
    ;
 Cond: LOrExp    {}
     ;
@@ -117,47 +122,45 @@ ArrayBlock:                         {}
           | '[' Exp ']'             {}
           | ArrayBlock '[' Exp ']'  {}
           ;
-PrimaryExp: '(' Exp ')' {}
+PrimaryExp: '(' Exp ')'
           | LVal        {}
-          | Number      {}
+          | Number
           ;
-Number: INT_CONST;
-UnaryExp: PrimaryExp                {}
+Number: INT_CONST   { $$ = new NumberAST($1); };
+UnaryExp: PrimaryExp
         | IDENT '(' ')'             {}
         | IDENT '(' FuncRParams ')' {}
-        | UnaryOp UnaryExp          {}
+        | ADD UnaryExp              { $$ = new UnaryAST($1, $2); }
+        | SUB UnaryExp              { $$ = new UnaryAST($1, $2); }
+        | LNOT UnaryExp             { $$ = new UnaryAST($1, $2); }
         ;
-UnaryOp: ADD    {}
-       | SUB    {}
-       | LNOT   {}
-       ;
 FuncRParams: Exp                    {}
            | FuncRParams ',' Exp    {}
            ;
-MulExp: UnaryExp            {}
-      | MulExp MUL UnaryExp {}
-      | MulExp DIV UnaryExp {}
-      | MulExp MOD UnaryExp {}
+MulExp: UnaryExp
+      | MulExp MUL UnaryExp { $$ = new BinaryAST($1, $2, $3); }
+      | MulExp DIV UnaryExp { $$ = new BinaryAST($1, $2, $3); }
+      | MulExp MOD UnaryExp { $$ = new BinaryAST($1, $2, $3); }
       ;
-AddExp: MulExp              {}
-      | AddExp ADD MulExp   {}
-      | AddExp SUB MulExp   {}
+AddExp: MulExp
+      | AddExp ADD MulExp   { $$ = new BinaryAST($1, $2, $3); }
+      | AddExp SUB MulExp   { $$ = new BinaryAST($1, $2, $3); }
       ;
-RelExp: AddExp                  {}
-      | RelExp LESS AddExp      {}
-      | RelExp GREAT AddExp     {}
-      | RelExp LESSEQ AddExp    {}
-      | RelExp GREATEQ AddExp   {}
+RelExp: AddExp
+      | RelExp LESS AddExp      { $$ = new BinaryAST($1, $2, $3); }
+      | RelExp GREAT AddExp     { $$ = new BinaryAST($1, $2, $3); }
+      | RelExp LESSEQ AddExp    { $$ = new BinaryAST($1, $2, $3); }
+      | RelExp GREATEQ AddExp   { $$ = new BinaryAST($1, $2, $3); }
       ;
-EqExp: RelExp           {}
-     | EqExp EQ RelExp  {}
-     | EqExp NEQ RelExp {}
+EqExp: RelExp
+     | EqExp EQ RelExp  { $$ = new BinaryAST($1, $2, $3); }
+     | EqExp NEQ RelExp { $$ = new BinaryAST($1, $2, $3); }
      ;
-LAndExp: EqExp              {}
-       | LAndExp LAND EqExp {}
+LAndExp: EqExp
+       | LAndExp LAND EqExp { $$ = new BinaryAST($1, $2, $3); }
        ;
-LOrExp: LAndExp             {}
-      | LOrExp LOR LAndExp  {}
+LOrExp: LAndExp
+      | LOrExp LOR LAndExp  { $$ = new BinaryAST($1, $2, $3); }
       ;
 ConstExp: AddExp    {}
         ;

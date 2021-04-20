@@ -1,6 +1,7 @@
 %{
 #include <string>
 #include <errno.h>
+#include "ast.h"
 #include "parser.hpp"
 extern int yylex_destroy();
 extern void yyerror(const char *s);
@@ -32,21 +33,21 @@ int text2num(char *text){
 "continue"  return CONTINUE;
 "return" return RETURN;
 [A-Za-z_][A-Za-z_0-9]*  yylval.ident = new std::string(yytext); return IDENT;
-"+"     return ADD;
-"-"     return SUB;
-"*"     return MUL;
-"/"     return DIV;
-"%"     return MOD;
-"=="    return EQ;
-"!="    return NEQ;
-"<"     return LESS;
-">"     return GREAT;
-"<="    return LESSEQ;
-">="    return GREATEQ;
-"!"     return LNOT;
-"&&"    return LAND;
-"||"    return LOR;
-"="     return ASSIGN;
+"+"     return yylval.op = ADD;
+"-"     return yylval.op = SUB;
+"*"     return yylval.op = MUL;
+"/"     return yylval.op = DIV;
+"%"     return yylval.op = MOD;
+"=="    return yylval.op = EQ;
+"!="    return yylval.op = NEQ;
+"<"     return yylval.op = LESS;
+">"     return yylval.op = GREAT;
+"<="    return yylval.op = LESSEQ;
+">="    return yylval.op = GREATEQ;
+"!"     return yylval.op = LNOT;
+"&&"    return yylval.op = LAND;
+"||"    return yylval.op = LOR;
+"="     return yylval.op = ASSIGN;
 [\(\)\[\]\{\},;]    return yytext[0];
 [ \t\n]             ;
 .                   yyerror("unknown token");

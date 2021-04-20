@@ -5,21 +5,46 @@
 #ifndef SYSYCOMPILER_AST_H
 #define SYSYCOMPILER_AST_H
 
+#include "context.h"
 
 class AST {
+private:
 public:
-    virtual ~AST() = 0;
+    virtual int eval(Context *ctx) const = 0;
 };
 
-class Type {
+class ExpressionAST : public AST {
 private:
-    bool is_const, is_void;
 public:
-    Type(bool is_const, bool is_void) : is_const(is_const), is_void(is_void) {}
+};
 
-    bool isConst() const { return is_const; }
+class BinaryAST : public ExpressionAST {
+private:
+    int op;
+    AST *lhs, *rhs;
+public:
+    BinaryAST(AST *lhs, int op, AST *rhs) : lhs(lhs), op(op), rhs(rhs) {}
 
-    bool isVoid() const { return is_void; }
+    int eval(Context *ctx) const override;
+};
+
+class UnaryAST : public ExpressionAST {
+private:
+    int op;
+    AST *rhs;
+public:
+    UnaryAST(int op, AST *rhs) : op(op), rhs(rhs) {}
+
+    int eval(Context *ctx) const override;
+};
+
+class NumberAST : public ExpressionAST {
+private:
+    int val;
+public:
+    explicit NumberAST(int val) : val(val) {}
+
+    int eval(Context *ctx) const override;
 };
 
 #endif //SYSYCOMPILER_AST_H

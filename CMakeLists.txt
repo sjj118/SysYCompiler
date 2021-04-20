@@ -10,8 +10,7 @@ BISON_TARGET(parser src/front/parser.y ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp)
 FLEX_TARGET(scanner src/front/scanner.l ${CMAKE_CURRENT_BINARY_DIR}/scanner.cpp)
 ADD_FLEX_BISON_DEPENDENCY(scanner parser)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(src)
+include_directories(src src/define src/front src/back)
 
-file(GLOB srcs src/*.cpp)
-
-add_executable(SysYCompiler ${srcs} ${BISON_parser_OUTPUTS} ${FLEX_scanner_OUTPUTS})
+add_executable(SysYCompiler ${BISON_parser_OUTPUTS} ${FLEX_scanner_OUTPUTS}
+        src/main.cpp src/define/ast.h src/back/context.h src/back/eval.cpp)

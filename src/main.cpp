@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cstdio>
 #include <cstring>
+#include "ast.h"
 
 extern int yyparse();
 
