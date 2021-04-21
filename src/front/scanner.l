@@ -29,9 +29,9 @@ int text2num(char *text){
 "if"        return IF;
 "else"      return ELSE;
 "while"     return WHILE;
-"break"     return BREAK;
-"continue"  return CONTINUE;
-"return" return RETURN;
+"break"     return yylval.op = BREAK;
+"continue"  return yylval.op = CONTINUE;
+"return"    return yylval.op = RETURN;
 [A-Za-z_][A-Za-z_0-9]*  yylval.ident = new std::string(yytext); return IDENT;
 "+"     return yylval.op = ADD;
 "-"     return yylval.op = SUB;
