@@ -21,11 +21,6 @@ private:
 public:
 };
 
-class StmtAST : public AST {
-private:
-public:
-};
-
 class BinaryAST : public ExpressionAST {
 private:
     int op;
@@ -57,33 +52,38 @@ public:
 
 class FunCallAST : public ExpressionAST {
 private:
-    std::string ident;
-    std::vector<ExpressionAST *> params;
+    std::string *ident;
+    std::vector<ExpressionAST *> *params;
 public:
-    FunCallAST(std::string ident, std::vector<ExpressionAST *> params) : ident(std::move(ident)),
-                                                                         params(std::move(params)) {}
+    FunCallAST(std::string *ident, std::vector<ExpressionAST *> *params) : ident(ident),
+                                                                           params(params) {}
 
     int eval(Context *ctx) const override;
 };
 
 class LValAST : public ExpressionAST {
 private:
-    std::string ident;
-    std::vector<ExpressionAST *> indices;
+    std::string *ident;
+    std::vector<ExpressionAST *> *indices;
 public:
-    LValAST(std::string ident, std::vector<ExpressionAST *> indices) : ident(std::move(ident)),
-                                                                       indices(std::move(indices)) {}
+    LValAST(std::string *ident, std::vector<ExpressionAST *> *indices) : ident(ident),
+                                                                         indices(indices) {}
 
     int eval(Context *ctx) const override;
 
-    [[nodiscard]] const std::string &getIdent() const { return ident; }
+    [[nodiscard]] const std::string &getIdent() const { return *ident; }
+};
+
+class StmtAST : public AST {
+private:
+public:
 };
 
 class BlockStmtAST : public StmtAST {
 private:
-    std::vector<StmtAST *> stmts;
+    std::vector<StmtAST *> *stmts;
 public:
-    explicit BlockStmtAST(std::vector<StmtAST *> stmts) : stmts(std::move(stmts)) {}
+    explicit BlockStmtAST(std::vector<StmtAST *> *stmts) : stmts(stmts) {}
 
     int eval(Context *ctx) const override;
 };
@@ -134,6 +134,58 @@ private:
     ExpressionAST *exp;
 public:
     ControlStmtAST(int type, ExpressionAST *exp) : type(type), exp(exp) {}
+
+    int eval(Context *ctx) const override;
+};
+
+class DefAST : public AST {
+private:
+public:
+};
+
+class InitValAST : public AST {
+private:
+    ExpressionAST *exp;
+    std::vector<InitValAST *> *list;
+public:
+    explicit InitValAST(ExpressionAST *exp) : exp(exp), list(nullptr) {}
+
+    explicit InitValAST(std::vector<InitValAST *> *list) : exp(nullptr), list(list) {}
+
+    int eval(Context *ctx) const override;
+};
+
+class VarDefAST : public DefAST {
+private:
+    bool is_const;
+    std::string *ident;
+    std::vector<ExpressionAST *> *indices;
+    InitValAST *init;
+public:
+    VarDefAST(bool is_const, std::string *ident, std::vector<ExpressionAST *> *indices, InitValAST *init) :
+            is_const(is_const), ident(ident), indices(indices), init(init) {}
+
+    int eval(Context *ctx) const override;
+};
+
+class FuncDefAST : public DefAST {
+private:
+    bool is_void;
+    std::string *ident;
+    std::vector<VarDefAST *> *params;
+    BlockStmtAST *stmts;
+public:
+    FuncDefAST(bool is_void, std::string *ident, std::vector<VarDefAST *> *params, BlockStmtAST *stmts) :
+            is_void(is_void), ident(ident), params(params), stmts(stmts) {}
+
+    int eval(Context *ctx) const override;
+};
+
+class CompUnitAST : public AST {
+private:
+    std::vector<DefAST *> *defs;
+public:
+    explicit CompUnitAST(std::vector<DefAST *> *defs) : defs(defs) {}
 
     int eval(Context *ctx) const override;
 };

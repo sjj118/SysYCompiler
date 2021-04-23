@@ -22,88 +22,96 @@ void yyerror(const char *s) {
 
 %union{
     int num;
-    int op;
+    int token;
     std::string *ident;
     ExpressionAST *exp;
     std::vector<ExpressionAST *> *exp_list;
     LValAST *lval;
     StmtAST *stmt;
     std::vector<StmtAST *> *stmt_list;
+    DefAST *def;
+    std::vector<DefAST *> *def_list;
+    VarDefAST *vardef;
+    std::vector<VarDefAST *> *vardef_list;
+    InitValAST *init;
+    std::vector<InitValAST *> *init_list;
+    CompUnitAST *comp_unit;
 };
 %token <num> INT_CONST
 %token <ident> IDENT
-%token CONST INT VOID IF ELSE WHILE
-%token <op> BREAK CONTINUE RETURN
-%token <op> ADD SUB MUL DIV MOD EQ NEQ LESS GREAT LESSEQ GREATEQ LNOT LAND LOR ASSIGN
-%type <exp> Exp Cond PrimaryExp Number UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp ConstExp
-%type <exp_list> FuncRParams ArrayBlock ConstArrayBlock
+%token <token> CONST INT VOID IF ELSE WHILE BREAK CONTINUE RETURN
+%token <token> ADD SUB MUL DIV MOD EQ NEQ LESS GREAT LESSEQ GREATEQ LNOT LAND LOR
+%type <exp> Exp Cond PrimaryExp Number UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
+%type <exp_list> FuncRParams ArrayBlock
 %type <lval> LVal
 %type <stmt> Stmt BlockItem Block
 %type <stmt_list> BlockItems
+%type <def> FuncDef ConstDef VarDef
+%type <def_list> DeclDefs Decl ConstDecl ConstDefs VarDecl VarDefs
+%type <vardef> FuncFParam
+%type <vardef_list> FuncFParams
+%type <init> InitVal
+%type <init_list> InitVals
+%type <comp_unit> CompUnit
+%type <token> FuncType BType
 
 %nonassoc IFX
 %nonassoc ELSE
 
 %start Start
 %%
-Start: Block    { $1->eval(nullptr); }
+Start: CompUnit '}'   { $1->eval(nullptr); }
 
-Program: CompUnit           {}
-       | Program CompUnit   {}
-       ;
-CompUnit: Decl      {}
-        | FuncDef   {}
+CompUnit: DeclDefs  { $$ = new CompUnitAST($1); }
+
+DeclDefs: Decl              { $$ = $1; }
+        | FuncDef           { $$ = new std::vector<DefAST *>(); $$->push_back($1); }
+        | DeclDefs Decl     { $$ = $1; $$->insert($$->end(), $2->begin(), $2->end()); delete $2; }
+        | DeclDefs FuncDef  { $$ = $1; $$->push_back($2); }
         ;
-Decl: ConstDecl {}
-    | VarDecl   {}
+Decl: ConstDecl
+    | VarDecl
     ;
-ConstDecl: CONST BType ConstDefBlock ';'    {}
+ConstDecl: CONST BType ConstDefs ';'    { $$ = $3; }
          ;
-BType: INT  {};
-ConstDefBlock: ConstDef                     {}
-             | ConstDefBlock ',' ConstDef   {}
-             ;
-ConstDef: IDENT ConstArrayBlock '=' ConstInitVal {}
+BType: INT;
+ConstDefs: ConstDef                 { $$ = new std::vector<DefAST *>; $$->push_back($1); }
+         | ConstDefs ',' ConstDef   { $$ = $1; $$->push_back($3); }
+         ;
+ConstDef: IDENT ArrayBlock '=' InitVal { $$ = new VarDefAST(true, $1, $2, $4); }
         ;
-ConstArrayBlock:                                {}
-          | '[' ConstExp ']'                    {}
-          | ConstArrayBlock '[' ConstExp ']'    {}
-          ;
-ConstInitVal: ConstExp                  {}
-            | '{' '}'                   {}
-            | '{' ConstInitVals '}' {}
-            ;
-ConstInitVals: ConstInitVal                     {}
-             | ConstInitVals ',' ConstInitVal   {}
-             ;
-VarDecl: BType VarDefs ";"  {}
+VarDecl: BType VarDefs ';'  { $$ = $2; }
        ;
-VarDefs: VarDef             {}
-       | VarDefs ',' VarDef {}
+VarDefs: VarDef             { $$ = new std::vector<DefAST *>; $$->push_back($1); }
+       | VarDefs ',' VarDef { $$ = $1; $$->push_back($3); }
        ;
-VarDef: IDENT ConstArrayBlock               {}
-      | IDENT ConstArrayBlock '=' InitVal   {}
+VarDef: IDENT ArrayBlock               { $$ = new VarDefAST(false, $1, $2, nullptr); }
+      | IDENT ArrayBlock '=' InitVal   { $$ = new VarDefAST(false, $1, $2, $4); }
       ;
-InitVal: Exp                    {}
-       | '{' '}'                {}
-       | '{' InitVals '}'   {}
+InitVal: Exp                { $$ = new InitValAST($1); }
+       | '{' '}'            { $$ = new InitValAST(new std::vector<InitValAST *>); }
+       | '{' InitVals '}'   { $$ = new InitValAST($2); }
        ;
-InitVals: InitVal               {}
-        | InitVals ',' InitVal  {}
+InitVals: InitVal               { $$ = new std::vector<InitValAST *>; $$->push_back($1); }
+        | InitVals ',' InitVal  { $$ = $1; $$->push_back($3); }
         ;
-
-FuncDef: FuncType IDENT '(' [FuncFParams] ')' Block {}
-       | FuncType IDENT '(' ')' Block               {}
-       ;
-FuncType: VOID | INT    {};
-FuncFParams: FuncFParam                 {}
-           | FuncFParams ',' FuncFParam {}
-           ;
-FuncFParam: BType IDENT                         {}
-          | BType IDENT '[' ']' ConstArrayBlock {}
+ArrayBlock:                         { $$ = new std::vector<ExpressionAST *>; }
+          | '[' Exp ']'             { $$ = new std::vector<ExpressionAST *>; $$->push_back($2); }
+          | ArrayBlock '[' Exp ']'  { $$ = $1; $$->push_back($3); }
           ;
 
-Block: '{' BlockItems '}'   { $$ = new BlockStmtAST(*$2); delete $2; }
+FuncDef: FuncType IDENT '(' FuncFParams ')' Block   { $$ = new FuncDefAST($1 == VOID, $2, $4, (BlockStmtAST *)$6); }
+       | FuncType IDENT '(' ')' Block               { $$ = new FuncDefAST($1 == VOID, $2, new std::vector<VarDefAST *> , (BlockStmtAST *)$5); }
+       ;
+FuncType: VOID | INT;
+FuncFParams: FuncFParam                 { $$ = new std::vector<VarDefAST *>; $$->push_back($1); }
+           | FuncFParams ',' FuncFParam { $$ = $1; $$->push_back($3); }
+           ;
+FuncFParam: BType IDENT                     { $$ = new VarDefAST(false, $2, new std::vector<ExpressionAST *>, nullptr); }
+          | BType IDENT '[' ']' ArrayBlock  { $5->insert($5->begin(), nullptr); $$ = new VarDefAST(false, $2, $5, nullptr); }
+          ;
+
+Block: '{' BlockItems '}'   { $$ = new BlockStmtAST($2); }
      ;
 BlockItems:                         { $$ = new std::vector<StmtAST *>; }
           | BlockItem               { $$ = new std::vector<StmtAST *>; $$->push_back($1); }
@@ -112,7 +120,7 @@ BlockItems:                         { $$ = new std::vector<StmtAST *>; }
 BlockItem: Decl
          | Stmt
          ;
-Stmt: LVal ASSIGN Exp ';'               { $$ = new AssignStmtAST($1, $3); }
+Stmt: LVal '=' Exp ';'               { $$ = new AssignStmtAST($1, $3); }
     | ';'                               { $$ = new ExpStmtAST(nullptr); }
     | Exp ';'                           { $$ = new ExpStmtAST($1); }
     | Block
@@ -128,20 +136,16 @@ Exp: AddExp
    ;
 Cond: LOrExp
     ;
-LVal: IDENT ArrayBlock  { $$ = new LValAST(*$1, *$2); delete $1; delete $2; }
+LVal: IDENT ArrayBlock  { $$ = new LValAST($1, $2); }
     ;
-ArrayBlock:                         { $$ = new std::vector<ExpressionAST *>; }
-          | '[' Exp ']'             { $$ = new std::vector<ExpressionAST *>; $$->push_back($2); }
-          | ArrayBlock '[' Exp ']'  { $$ = $1; $$->push_back($3); }
-          ;
 PrimaryExp: '(' Exp ')' { $$ = $2; }
           | LVal
           | Number
           ;
 Number: INT_CONST   { $$ = new NumberAST($1); };
 UnaryExp: PrimaryExp
-        | IDENT '(' ')'             { $$ = new FunCallAST(*$1, std::vector<ExpressionAST *>()); }
-        | IDENT '(' FuncRParams ')' { $$ = new FunCallAST(*$1, *$3); delete $1; delete $3;}
+        | IDENT '(' ')'             { $$ = new FunCallAST($1, new std::vector<ExpressionAST *>); }
+        | IDENT '(' FuncRParams ')' { $$ = new FunCallAST($1, $3); }
         | ADD UnaryExp              { $$ = new UnaryAST($1, $2); }
         | SUB UnaryExp              { $$ = new UnaryAST($1, $2); }
         | LNOT UnaryExp             { $$ = new UnaryAST($1, $2); }
@@ -174,5 +178,3 @@ LAndExp: EqExp
 LOrExp: LAndExp
       | LOrExp LOR LAndExp  { $$ = new BinaryAST($1, $2, $3); }
       ;
-ConstExp: AddExp
-        ;

@@ -53,23 +53,22 @@ int NumberAST::eval(Context *ctx) const { return val; }
 
 int FunCallAST::eval(Context *ctx) const {
     // todo
-    printf("func call: %s(", ident.c_str());
-    for (auto *i:params)printf("%d, ", i->eval(ctx));
+    printf("func call: %s(", ident->c_str());
+    for (auto *i:*params)printf("%d, ", i->eval(ctx));
     puts(")");
     return 0;
 }
 
 int LValAST::eval(Context *ctx) const {
     // todo
-    printf("lval: %s", ident.c_str());
-    for (auto *i:indices)printf("[%d]", i->eval(ctx));
-    puts("");
+    printf("%s", ident->c_str());
+    for (auto *i:*indices)printf("[%d]", i->eval(ctx));
     return 0;
 }
 
 int BlockStmtAST::eval(Context *ctx) const {
     // todo
-    for (auto *i:stmts)i->eval(ctx);
+    for (auto *i:*stmts)i->eval(ctx);
     return -1;
 }
 
@@ -81,7 +80,8 @@ int ExpStmtAST::eval(Context *ctx) const {
 
 int AssignStmtAST::eval(Context *ctx) const {
     // todo
-    printf("assign: %s = %d\n", lhs->getIdent().c_str(), rhs->eval(ctx));
+    lhs->eval(ctx);
+    printf(" = %d\n", rhs->eval(ctx));
     return -1;
 }
 
@@ -111,5 +111,45 @@ int ControlStmtAST::eval(Context *ctx) const {
             else puts("return");
             break;
     }
+    return -1;
+}
+
+int VarDefAST::eval(Context *ctx) const {
+    if (is_const)printf("const ");
+    printf("int %s", ident->c_str());
+    for (auto *i:*indices)if (i)printf("[%d]", i->eval(ctx)); else printf("[]");
+    if (init) {
+        printf(" = ");
+        init->eval(ctx);
+    }
+    return -1;
+}
+
+int FuncDefAST::eval(Context *ctx) const {
+    if (is_void)printf("void ");
+    else printf("int ");
+    printf("%s(", ident->c_str());
+    for (auto *i:*params) i->eval(ctx), printf(", ");
+    puts("){");
+    stmts->eval(ctx);
+    puts("}");
+    return -1;
+}
+
+int InitValAST::eval(Context *ctx) const {
+    if (exp)printf("%d", exp->eval(ctx));
+    else {
+        printf("{");
+        for (auto *i:*list) {
+            i->eval(ctx);
+            printf(", ");
+        }
+        printf("}");
+    }
+    return -1;
+}
+
+int CompUnitAST::eval(Context *ctx) const {
+    for (auto *i:*defs)i->eval(ctx), puts("");
     return -1;
 }
