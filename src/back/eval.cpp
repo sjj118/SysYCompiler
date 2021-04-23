@@ -153,3 +153,8 @@ int CompUnitAST::eval(Context *ctx) const {
     for (auto *i:*defs)i->eval(ctx), puts("");
     return -1;
 }
+
+int IdentAST::eval(Context *ctx) const {
+    // todo
+    return -1;
+}

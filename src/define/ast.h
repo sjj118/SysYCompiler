@@ -16,6 +16,17 @@ public:
     virtual int eval(Context *ctx) const = 0;
 };
 
+class IdentAST : public AST {
+private:
+    std::string *name;
+public:
+    explicit IdentAST(std::string *name) : name(name) {}
+
+    [[nodiscard]] const char *c_str() const { return name->c_str(); }
+
+    int eval(Context *ctx) const override;
+};
+
 class ExpressionAST : public AST {
 private:
 public:
@@ -52,26 +63,24 @@ public:
 
 class FunCallAST : public ExpressionAST {
 private:
-    std::string *ident;
+    IdentAST *ident;
     std::vector<ExpressionAST *> *params;
 public:
-    FunCallAST(std::string *ident, std::vector<ExpressionAST *> *params) : ident(ident),
-                                                                           params(params) {}
+    FunCallAST(IdentAST *ident, std::vector<ExpressionAST *> *params) : ident(ident),
+                                                                        params(params) {}
 
     int eval(Context *ctx) const override;
 };
 
 class LValAST : public ExpressionAST {
 private:
-    std::string *ident;
+    IdentAST *ident;
     std::vector<ExpressionAST *> *indices;
 public:
-    LValAST(std::string *ident, std::vector<ExpressionAST *> *indices) : ident(ident),
-                                                                         indices(indices) {}
+    LValAST(IdentAST *ident, std::vector<ExpressionAST *> *indices) : ident(ident),
+                                                                      indices(indices) {}
 
     int eval(Context *ctx) const override;
-
-    [[nodiscard]] const std::string &getIdent() const { return *ident; }
 };
 
 class StmtAST : public AST {
@@ -158,11 +167,11 @@ public:
 class VarDefAST : public DefAST {
 private:
     bool is_const;
-    std::string *ident;
+    IdentAST *ident;
     std::vector<ExpressionAST *> *indices;
     InitValAST *init;
 public:
-    VarDefAST(bool is_const, std::string *ident, std::vector<ExpressionAST *> *indices, InitValAST *init) :
+    VarDefAST(bool is_const, IdentAST *ident, std::vector<ExpressionAST *> *indices, InitValAST *init) :
             is_const(is_const), ident(ident), indices(indices), init(init) {}
 
     int eval(Context *ctx) const override;
@@ -171,11 +180,11 @@ public:
 class FuncDefAST : public DefAST {
 private:
     bool is_void;
-    std::string *ident;
+    IdentAST *ident;
     std::vector<VarDefAST *> *params;
     BlockStmtAST *stmts;
 public:
-    FuncDefAST(bool is_void, std::string *ident, std::vector<VarDefAST *> *params, BlockStmtAST *stmts) :
+    FuncDefAST(bool is_void, IdentAST *ident, std::vector<VarDefAST *> *params, BlockStmtAST *stmts) :
             is_void(is_void), ident(ident), params(params), stmts(stmts) {}
 
     int eval(Context *ctx) const override;

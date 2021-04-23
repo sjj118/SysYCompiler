@@ -23,7 +23,7 @@ void yyerror(const char *s) {
 %union{
     int num;
     int token;
-    std::string *ident;
+    IdentAST *ident;
     ExpressionAST *exp;
     std::vector<ExpressionAST *> *exp_list;
     LValAST *lval;
@@ -100,10 +100,11 @@ ArrayBlock:                         { $$ = new std::vector<ExpressionAST *>; }
           | ArrayBlock '[' Exp ']'  { $$ = $1; $$->push_back($3); }
           ;
 
-FuncDef: FuncType IDENT '(' FuncFParams ')' Block   { $$ = new FuncDefAST($1 == VOID, $2, $4, (BlockStmtAST *)$6); }
-       | FuncType IDENT '(' ')' Block               { $$ = new FuncDefAST($1 == VOID, $2, new std::vector<VarDefAST *> , (BlockStmtAST *)$5); }
-       ;
-FuncType: VOID | INT;
+FuncDef: BType IDENT '(' FuncFParams ')' Block   { $$ = new FuncDefAST(false, $2, $4, (BlockStmtAST *)$6); }
+       | BType IDENT '(' ')' Block               { $$ = new FuncDefAST(false, $2, new std::vector<VarDefAST *> , (BlockStmtAST *)$5); }
+       | VOID IDENT '(' FuncFParams ')' Block    { $$ = new FuncDefAST(true, $2, $4, (BlockStmtAST *)$6); }
+       | VOID IDENT '(' ')' Block                { $$ = new FuncDefAST(true, $2, new std::vector<VarDefAST *> , (BlockStmtAST *)$5); }
+;
 FuncFParams: FuncFParam                 { $$ = new std::vector<VarDefAST *>; $$->push_back($1); }
            | FuncFParams ',' FuncFParam { $$ = $1; $$->push_back($3); }
            ;
