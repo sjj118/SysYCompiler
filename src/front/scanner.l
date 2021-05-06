@@ -1,7 +1,7 @@
 %{
 #include <string>
 #include <errno.h>
-#include "ast.h"
+#include "sysy.h"
 #include "parser.hpp"
 extern int yylex_destroy();
 extern void yyerror(const char *s);
@@ -32,7 +32,7 @@ int text2num(char *text){
 "break"     return yylval.token = BREAK;
 "continue"  return yylval.token = CONTINUE;
 "return"    return yylval.token = RETURN;
-[A-Za-z_][A-Za-z_0-9]*  yylval.ident = new IdentAST(new std::string(yytext)); return IDENT;
+[A-Za-z_][A-Za-z_0-9]*  yylval.ident = new std::string(yytext); return IDENT;
 "+"     return yylval.token = ADD;
 "-"     return yylval.token = SUB;
 "*"     return yylval.token = MUL;

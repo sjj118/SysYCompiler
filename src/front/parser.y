@@ -1,13 +1,17 @@
 %code requires {
 #include <string>
 #include <vector>
-#include "ast.h"
+#include "sysy.h"
+
+std::string op2str();
 }
 %{
 #include <cstdio>
 #include <cstdlib>
-extern int yydebug;
+#include "sysy.h"
 
+CompUnitAST *root;
+extern int yydebug;
 extern int yylex();
 extern int yyget_lineno();
 extern int yylex_destroy();
@@ -16,6 +20,38 @@ void yyerror(const char *s) {
     yylex_destroy();
     if (!yydebug) std::exit(1);
 }
+std::string op2str(int op) {
+    switch (op) {
+        case ADD:
+            return "+";
+        case SUB:
+            return "-";
+        case MUL:
+            return "*";
+        case DIV:
+            return "/";
+        case MOD:
+            return "%";
+        case EQ:
+            return "==";
+        case NEQ:
+            return "!=";
+        case LESS:
+            return "<";
+        case GREAT:
+            return ">";
+        case LESSEQ:
+            return "<=";
+        case GREATEQ:
+            return ">=";
+        case LNOT:
+            return "!";
+        case LAND:
+            return "&&";
+        case LOR:
+            return "||";
+    }
+}
 #define YYERROR_VERBOSE true
 #define YYDEBUG 1
 %}
@@ -23,19 +59,19 @@ void yyerror(const char *s) {
 %union{
     int num;
     int token;
-    IdentAST *ident;
-    ExpressionAST *exp;
-    std::vector<ExpressionAST *> *exp_list;
-    LValAST *lval;
-    StmtAST *stmt;
-    std::vector<StmtAST *> *stmt_list;
-    DefAST *def;
-    std::vector<DefAST *> *def_list;
-    VarDefAST *vardef;
-    std::vector<VarDefAST *> *vardef_list;
-    InitValAST *init;
-    std::vector<InitValAST *> *init_list;
-    CompUnitAST *comp_unit;
+    std::string *ident;
+    SysYExpression *exp;
+    std::vector<SysYExpression *> *exp_list;
+    SysYLVal *lval;
+    SysYStatement *stmt;
+    std::vector<SysYStatement *> *stmt_list;
+    SysYDefine *def;
+    std::vector<SysYDefine *> *def_list;
+    SysYVarDef *vardef;
+    std::vector<SysYVarDef *> *vardef_list;
+    SysYInitVal *init;
+    std::vector<SysYInitVal *> *init_list;
+    SysYCompUnit *comp_unit;
 };
 %token <num> INT_CONST
 %token <ident> IDENT
@@ -58,11 +94,9 @@ void yyerror(const char *s) {
 %nonassoc IFX
 %nonassoc ELSE
 
-%start Start
+%start CompUnit
 %%
-Start: CompUnit '}'   { $1->eval(nullptr); }
-
-CompUnit: DeclDefs  { $$ = new CompUnitAST($1); }
+CompUnit: DeclDefs  { root = $$ = new CompUnitAST($1); }
 
 DeclDefs: Decl              { $$ = $1; }
         | FuncDef           { $$ = new std::vector<DefAST *>(); $$->push_back($1); }
@@ -85,7 +119,7 @@ VarDecl: BType VarDefs ';'  { $$ = $2; }
 VarDefs: VarDef             { $$ = new std::vector<DefAST *>; $$->push_back($1); }
        | VarDefs ',' VarDef { $$ = $1; $$->push_back($3); }
        ;
-VarDef: IDENT ArrayBlock               { $$ = new VarDefAST(false, $1, $2, nullptr); }
+VarDef: IDENT ArrayBlock               { $$ = new VarDefAST(false, $1, $2); }
       | IDENT ArrayBlock '=' InitVal   { $$ = new VarDefAST(false, $1, $2, $4); }
       ;
 InitVal: Exp                { $$ = new InitValAST($1); }
@@ -108,8 +142,8 @@ FuncDef: BType IDENT '(' FuncFParams ')' Block   { $$ = new FuncDefAST(false, $2
 FuncFParams: FuncFParam                 { $$ = new std::vector<VarDefAST *>; $$->push_back($1); }
            | FuncFParams ',' FuncFParam { $$ = $1; $$->push_back($3); }
            ;
-FuncFParam: BType IDENT                     { $$ = new VarDefAST(false, $2, new std::vector<ExpressionAST *>, nullptr); }
-          | BType IDENT '[' ']' ArrayBlock  { $5->insert($5->begin(), nullptr); $$ = new VarDefAST(false, $2, $5, nullptr); }
+FuncFParam: BType IDENT                     { $$ = new VarDefAST(false, $2, new std::vector<ExpressionAST *>); }
+          | BType IDENT '[' ']' ArrayBlock  { $5->insert($5->begin(), nullptr); $$ = new VarDefAST(false, $2, $5); }
           ;
 
 Block: '{' BlockItems '}'   { $$ = new BlockStmtAST($2); }
@@ -121,16 +155,16 @@ BlockItems:                         { $$ = new std::vector<StmtAST *>; }
 BlockItem: Decl
          | Stmt
          ;
-Stmt: LVal '=' Exp ';'               { $$ = new AssignStmtAST($1, $3); }
-    | ';'                               { $$ = new ExpStmtAST(nullptr); }
+Stmt: LVal '=' Exp ';'                  { $$ = new AssignStmtAST($1, $3); }
+    | ';'                               { $$ = new ExpStmtAST(); }
     | Exp ';'                           { $$ = new ExpStmtAST($1); }
     | Block
-    | IF '(' Cond ')' Stmt %prec IFX    { $$ = new IfStmtAST($3, $5, nullptr); }
+    | IF '(' Cond ')' Stmt %prec IFX    { $$ = new IfStmtAST($3, $5); }
     | IF '(' Cond ')' Stmt ELSE Stmt    { $$ = new IfStmtAST($3, $5, $7); }
     | WHILE '(' Cond ')' Stmt           { $$ = new WhileStmtAST($3, $5); }
-    | BREAK ';'                         { $$ = new ControlStmtAST($1, nullptr); }
-    | CONTINUE ';'                      { $$ = new ControlStmtAST($1, nullptr); }
-    | RETURN ';'                        { $$ = new ControlStmtAST($1, nullptr); }
+    | BREAK ';'                         { $$ = new ControlStmtAST($1); }
+    | CONTINUE ';'                      { $$ = new ControlStmtAST($1); }
+    | RETURN ';'                        { $$ = new ControlStmtAST($1); }
     | RETURN Exp ';'                    { $$ = new ControlStmtAST($1, $2); }
     ;
 Exp: AddExp

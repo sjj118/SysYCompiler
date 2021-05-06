@@ -2,14 +2,22 @@
 #include <fstream>
 #include <cstdio>
 #include <cstring>
-#include "ast.h"
+#include "sysy.h"
+#include "gen_eeyore.h"
+
+extern SysYCompUnit *root;
 
 extern int yyparse();
+
+extern int yylex_destroy();
 
 using namespace std;
 
 int main(int argc, const char *argv[]) {
     yyparse();
+    yylex_destroy();
+    auto *eg = new EeyoreGenerator();
+    eg->generateOn(root);
     /*
     ofstream output;
     Reader reader;
@@ -39,7 +47,7 @@ int main(int argc, const char *argv[]) {
             else if (filename.substr(filename.size() - 7, 7) == ".eeyore")src = 1;
             else if (filename.substr(filename.size() - 7, 7) == ".tigger")src = 2;
             else {
-                cerr << "[error] unknown input file type.\n";
+                cerr << "[error] unknown input file type_.\n";
                 return 1;
             }
         }
