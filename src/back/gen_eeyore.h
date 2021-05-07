@@ -12,38 +12,59 @@
 
 class EeyoreGenerator {
 private:
-    int T_cnt{}, t_cnt{}, l_cnt{};
+    EeyoreProgram *root;
+    int gT_cnt{}, T_cnt{}, t_cnt{}, l_cnt{};
     Environment<std::string, EeyoreValue> vars;
-    std::vector<EeyoreAssignStmt *> inits;
     EeyoreFunc *func{};
     std::map<std::string, EeyoreFunc *> funcs;
     int err_cnt{};
 
-    EeyoreValue *logError(const char *msg) {
+    std::shared_ptr<EeyoreValue> logError(const char *msg) {
         printf("Error(eeyore): %s\n", msg);
         err_cnt++;
         return nullptr;
     }
 
 public:
-    EeyoreGenerator() = default;
+    EeyoreGenerator() {
+        root = new EeyoreProgram();
+    }
 
     ~EeyoreGenerator() {
-        for (auto *init:inits)delete init;
         for (const auto &it:funcs)delete it.second;
     }
 
-    EeyoreValue *generateOn(const SysYCompUnit *ast);
+    [[nodiscard]] const EeyoreProgram *program() const { return root; }
 
-    EeyoreValue *generateOn(const SysYVarDef *ast);
+    std::shared_ptr<EeyoreValue> generateOn(const SysYBinary *ast);
 
-    EeyoreValue *generateOn(const SysYFuncDef *ast);
+    std::shared_ptr<EeyoreValue> generateOn(const SysYUnary *ast);
 
-    EeyoreValue *generateOn(const SysYBinary *ast);
+    static std::shared_ptr<EeyoreValue> generateOn(const SysYNumber *ast);
 
-    EeyoreValue *generateOn(const SysYUnary *ast);
+    std::shared_ptr<EeyoreValue> generateOn(const SysYFunCall *ast);
 
-    EeyoreValue *generateOn(const SysYNumber *ast);
+    std::shared_ptr<EeyoreValue> generateOn(const SysYLVal *ast);
+
+    std::shared_ptr<EeyoreValue> generateOn(const SysYBlockStmt *ast);
+
+    std::shared_ptr<EeyoreValue> generateOn(const SysYExpStmt *ast);
+
+    std::shared_ptr<EeyoreValue> generateOn(const SysYAssignStmt *ast);
+
+    std::shared_ptr<EeyoreValue> generateOn(const SysYIfStmt *ast);
+
+    std::shared_ptr<EeyoreValue> generateOn(const SysYWhileStmt *ast);
+
+    std::shared_ptr<EeyoreValue> generateOn(const SysYControlStmt *ast);
+
+    std::shared_ptr<EeyoreValue> generateOn(const SysYInitVal *ast);
+
+    std::shared_ptr<EeyoreValue> generateOn(const SysYVarDef *ast);
+
+    std::shared_ptr<EeyoreValue> generateOn(const SysYFuncDef *ast);
+
+    std::shared_ptr<EeyoreValue> generateOn(const SysYCompUnit *ast);
 };
 
 #endif //SYSYCOMPILER_GEN_EEYORE_H

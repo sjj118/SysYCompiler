@@ -13,20 +13,18 @@ extern std::string op2str(int op);
 class EeyoreValue {
 private:
 public:
-    virtual ~EeyoreValue() = default;
-
     virtual std::string name() = 0;
 };
 
 class EeyoreNumber : public EeyoreValue {
 private:
-    int val_;
+    int num_;
 public:
-    explicit EeyoreNumber(int val) : val_(val) {}
+    explicit EeyoreNumber(int num) : num_(num) {}
 
-    [[nodiscard]] int val() const { return val_; }
+    [[nodiscard]] int num() const { return num_; }
 
-    std::string name() override { return std::to_string(val_); }
+    std::string name() override { return std::to_string(num_); }
 };
 
 class EeyoreSymbol : public EeyoreValue {
@@ -76,16 +74,17 @@ public:
 
 class EeyoreDeclaration {
 private:
-    EeyoreSymbol *symbol_;
+    std::shared_ptr<EeyoreSymbol> symbol_;
     int size_;
 public:
-    explicit EeyoreDeclaration(EeyoreSymbol *symbol, int size = 0) : symbol_(symbol), size_(size) {}
+    explicit EeyoreDeclaration(std::shared_ptr<EeyoreSymbol> symbol, int size = 0) :
+            symbol_(std::move(symbol)), size_(size) {}
 
-    [[nodiscard]] const EeyoreSymbol *symbol() const { return symbol_; }
+    [[nodiscard]] const std::shared_ptr<EeyoreSymbol> &symbol() const { return symbol_; }
 
     [[nodiscard]] int size() const { return size_; }
 
-    void dump(std::ostream &os, const char prefix[] = "") {
+    void dump(std::ostream &os, const char prefix[] = "") const {
         os << prefix << "var ";
         if (size_)os << size_ << " ";
         os << symbol_->name() << std::endl;
@@ -95,27 +94,20 @@ public:
 class EeyoreStatement {
 private:
 public:
-    virtual ~EeyoreStatement() = default;
-
-    virtual void dump(std::ostream &os, const char prefix[]) = 0;
+    virtual void dump(std::ostream &os, const char prefix[]) const = 0;
 };
 
 class EeyoreBinaryStmt : public EeyoreStatement {
 private:
     int op_;
-    EeyoreSymbol *dst_;
-    EeyoreValue *lhs_, *rhs_;
+    std::shared_ptr<EeyoreSymbol> dst_;
+    std::shared_ptr<EeyoreValue> lhs_, rhs_;
 public:
-    EeyoreBinaryStmt(int op, EeyoreSymbol *dst, EeyoreValue *lhs, EeyoreValue *rhs) :
-            op_(op), dst_(dst), lhs_(lhs), rhs_(rhs) {}
+    EeyoreBinaryStmt(int op, std::shared_ptr<EeyoreSymbol> dst,
+                     std::shared_ptr<EeyoreValue> lhs, std::shared_ptr<EeyoreValue> rhs) :
+            op_(op), dst_(std::move(dst)), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
 
-    ~EeyoreBinaryStmt() override {
-        delete dst_;
-        delete lhs_;
-        delete rhs_;
-    }
-
-    void dump(std::ostream &os, const char prefix[]) override {
+    void dump(std::ostream &os, const char prefix[]) const override {
         os << prefix << dst_->name() << " = " << lhs_->name() << " " << op2str(op_) << " " << rhs_->name() << std::endl;
     }
 };
@@ -123,39 +115,30 @@ public:
 class EeyoreUnaryStmt : public EeyoreStatement {
 private:
     int op_;
-    EeyoreSymbol *dst_;
-    EeyoreValue *rhs_;
+    std::shared_ptr<EeyoreSymbol> dst_;
+    std::shared_ptr<EeyoreValue> rhs_;
 public:
-    EeyoreUnaryStmt(int op, EeyoreSymbol *dst, EeyoreValue *rhs) : op_(op), dst_(dst), rhs_(rhs) {}
+    EeyoreUnaryStmt(int op, std::shared_ptr<EeyoreSymbol> dst, std::shared_ptr<EeyoreValue> rhs) :
+            op_(op), dst_(std::move(dst)), rhs_(std::move(rhs)) {}
 
-    ~EeyoreUnaryStmt() override {
-        delete dst_;
-        delete rhs_;
-    }
-
-    void dump(std::ostream &os, const char prefix[]) override {
+    void dump(std::ostream &os, const char prefix[]) const override {
         os << prefix << dst_->name() << " = " << op2str(op_) << rhs_->name() << std::endl;
     }
 };
 
 class EeyoreAssignStmt : public EeyoreStatement {
 private:
-    EeyoreSymbol *dst_;
-    EeyoreValue *val_;
-    EeyoreValue *dst_offset_, *val_offset_;
+    std::shared_ptr<EeyoreSymbol> dst_;
+    std::shared_ptr<EeyoreValue> val_;
+    std::shared_ptr<EeyoreValue> dst_offset_, val_offset_;
 public:
-    EeyoreAssignStmt(EeyoreSymbol *dst, EeyoreValue *val,
-                     EeyoreValue *dst_offset = nullptr, EeyoreValue *val_offset = nullptr) :
-            dst_(dst), val_(val), dst_offset_(dst_offset), val_offset_(val_offset) {}
+    EeyoreAssignStmt(std::shared_ptr<EeyoreSymbol> dst, std::shared_ptr<EeyoreValue> val,
+                     std::shared_ptr<EeyoreValue> dst_offset = nullptr,
+                     std::shared_ptr<EeyoreValue> val_offset = nullptr) :
+            dst_(std::move(dst)), val_(std::move(val)),
+            dst_offset_(std::move(dst_offset)), val_offset_(std::move(val_offset)) {}
 
-    ~EeyoreAssignStmt() override {
-        delete dst_;
-        delete val_;
-        delete dst_offset_;
-        delete val_offset_;
-    }
-
-    void dump(std::ostream &os, const char prefix[]) override {
+    void dump(std::ostream &os, const char prefix[]) const override {
         os << prefix << dst_->name();
         if (dst_offset_)os << "[" << dst_offset_->name() << "]";
         os << " = " << val_->name();
@@ -167,19 +150,14 @@ public:
 class EeyoreIfStmt : public EeyoreStatement {
 private:
     int op_;
-    EeyoreValue *lhs_, *rhs_;
-    EeyoreLabel *label_;
+    std::shared_ptr<EeyoreValue> lhs_, rhs_;
+    std::shared_ptr<EeyoreLabel> label_;
 public:
-    EeyoreIfStmt(int op, EeyoreValue *lhs, EeyoreValue *rhs, EeyoreLabel *label) :
-            op_(op), lhs_(lhs), rhs_(rhs), label_(label) {}
+    EeyoreIfStmt(int op, std::shared_ptr<EeyoreValue> lhs, std::shared_ptr<EeyoreValue> rhs,
+                 std::shared_ptr<EeyoreLabel> label) :
+            op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)), label_(std::move(label)) {}
 
-    ~EeyoreIfStmt() override {
-        delete lhs_;
-        delete rhs_;
-        delete label_;
-    }
-
-    void dump(std::ostream &os, const char prefix[]) override {
+    void dump(std::ostream &os, const char prefix[]) const override {
         os << prefix << "if " << lhs_->name() << " " << op2str(op_) << " " << rhs_->name()
            << " goto " << label_->name() << std::endl;
     }
@@ -187,45 +165,33 @@ public:
 
 class EeyoreGotoStmt : public EeyoreStatement {
 private:
-    EeyoreLabel *label_;
+    std::shared_ptr<EeyoreLabel> label_;
 public:
-    explicit EeyoreGotoStmt(EeyoreLabel *label) : label_(label) {}
+    explicit EeyoreGotoStmt(std::shared_ptr<EeyoreLabel> label) : label_(std::move(label)) {}
 
-    ~EeyoreGotoStmt() override {
-        delete label_;
-    }
-
-    void dump(std::ostream &os, const char prefix[]) override {
+    void dump(std::ostream &os, const char prefix[]) const override {
         os << prefix << "goto " << label_->name() << std::endl;
     }
 };
 
 class EeyoreLabelStmt : public EeyoreStatement {
 private:
-    EeyoreLabel *label_;
+    std::shared_ptr<EeyoreLabel> label_;
 public:
-    explicit EeyoreLabelStmt(EeyoreLabel *label) : label_(label) {}
+    explicit EeyoreLabelStmt(std::shared_ptr<EeyoreLabel> label) : label_(std::move(label)) {}
 
-    ~EeyoreLabelStmt() override {
-        delete label_;
-    }
-
-    void dump(std::ostream &os, const char prefix[]) override {
+    void dump(std::ostream &os, const char prefix[]) const override {
         os << label_->name() << ":" << std::endl;
     }
 };
 
 class EeyoreParamStmt : public EeyoreStatement {
 private:
-    EeyoreValue *param_;
+    std::shared_ptr<EeyoreValue> param_;
 public:
-    explicit EeyoreParamStmt(EeyoreValue *param) : param_(param) {}
+    explicit EeyoreParamStmt(std::shared_ptr<EeyoreValue> param) : param_(std::move(param)) {}
 
-    ~EeyoreParamStmt() override {
-        delete param_;
-    }
-
-    void dump(std::ostream &os, const char prefix[]) override {
+    void dump(std::ostream &os, const char prefix[]) const override {
         os << prefix << "param " << param_->name() << std::endl;
     }
 };
@@ -233,15 +199,12 @@ public:
 class EeyoreFunCall : public EeyoreStatement {
 private:
     std::string ident_;
-    EeyoreValue *dst_;
+    std::shared_ptr<EeyoreValue> dst_;
 public:
-    explicit EeyoreFunCall(std::string ident, EeyoreValue *dst = nullptr) : ident_(std::move(ident)), dst_(dst) {}
+    explicit EeyoreFunCall(std::string ident, std::shared_ptr<EeyoreValue> dst = nullptr) :
+            ident_(std::move(ident)), dst_(std::move(dst)) {}
 
-    ~EeyoreFunCall() override {
-        delete dst_;
-    }
-
-    void dump(std::ostream &os, const char prefix[]) override {
+    void dump(std::ostream &os, const char prefix[]) const override {
         os << prefix;
         if (dst_)os << dst_->name() << " = ";
         os << "call " << ident_ << std::endl;
@@ -250,15 +213,11 @@ public:
 
 class EeyoreReturnStmt : public EeyoreStatement {
 private:
-    EeyoreValue *val_;
+    std::shared_ptr<EeyoreValue> val_;
 public:
-    explicit EeyoreReturnStmt(EeyoreValue *val) : val_(val) {}
+    explicit EeyoreReturnStmt(std::shared_ptr<EeyoreValue> val) : val_(std::move(val)) {}
 
-    ~EeyoreReturnStmt() override {
-        delete val_;
-    }
-
-    void dump(std::ostream &os, const char prefix[]) override {
+    void dump(std::ostream &os, const char prefix[]) const override {
         os << prefix << "return";
         if (val_)os << " " << val_->name();
         os << std::endl;
@@ -269,54 +228,54 @@ class EeyoreFunc {
 private:
     std::string ident_;
     int arg_num_;
-    std::vector<EeyoreDeclaration *> decls_;
-    std::vector<EeyoreStatement *> stmts_;
+    std::vector<std::shared_ptr<EeyoreDeclaration>> decls_;
+    std::vector<std::shared_ptr<EeyoreStatement>> stmts_;
 public:
     EeyoreFunc(std::string ident, int arg_num) : ident_(std::move(ident)), arg_num_(arg_num) {}
 
-    void push_var(EeyoreDeclaration *decl) {
+    void push_var(const std::shared_ptr<EeyoreDeclaration> &decl) {
         decls_.push_back(decl);
     }
 
-    void push_stmt(EeyoreStatement *stmt) {
+    void push_stmt(const std::shared_ptr<EeyoreStatement> &stmt) {
         stmts_.push_back(stmt);
     }
 
-    void dump(std::ostream &os) {
+    void dump(std::ostream &os) const {
         os << ident_ << " [" << arg_num_ << "]" << std::endl;
-        for (auto *decl:decls_)decl->dump(os, "  ");
+        for (auto decl:decls_)decl->dump(os, "  ");
         os << std::endl;
-        for (auto *stmt:stmts_)stmt->dump(os, "  ");
+        for (auto stmt:stmts_)stmt->dump(os, "  ");
         os << "end " << ident_ << std::endl;
     }
 };
 
 class EeyoreProgram {
 private:
-    std::vector<EeyoreDeclaration *> decls_;
-    std::vector<EeyoreAssignStmt *> inits_;
-    std::vector<EeyoreFunc *> funcs_;
+    std::vector<std::shared_ptr<EeyoreDeclaration>> decls_;
+    std::vector<std::shared_ptr<EeyoreAssignStmt>> inits_;
+    std::vector<std::shared_ptr<EeyoreFunc>> funcs_;
 public:
     EeyoreProgram() = default;
 
-    void push_var(EeyoreDeclaration *decl) {
+    void push_var(const std::shared_ptr<EeyoreDeclaration> &decl) {
         decls_.push_back(decl);
     }
 
-    void push_init(EeyoreAssignStmt *init) {
+    void push_init(const std::shared_ptr<EeyoreAssignStmt> &init) {
         inits_.push_back(init);
     }
 
-    void push_func(EeyoreFunc *func) {
+    void push_func(const std::shared_ptr<EeyoreFunc> &func) {
         funcs_.push_back(func);
     }
 
-    void dump(std::ostream &os) {
-        for (auto *decl:decls_)decl->dump(os, "");
+    void dump(std::ostream &os) const {
+        for (auto decl:decls_)decl->dump(os, "");
         os << std::endl;
-        for (auto *init:inits_)init->dump(os, "");
+        for (auto init:inits_)init->dump(os, "");
         os << std::endl;
-        for (auto *func:funcs_)func->dump(os), os << std::endl;
+        for (auto func:funcs_)func->dump(os), os << std::endl;
     }
 };
 
