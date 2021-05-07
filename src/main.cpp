@@ -5,7 +5,7 @@
 #include "sysy.h"
 #include "gen_eeyore.h"
 
-extern SysYCompUnit *root;
+extern SysYExpression *root;
 
 extern int yyparse();
 
@@ -16,8 +16,10 @@ using namespace std;
 int main(int argc, const char *argv[]) {
     yyparse();
     yylex_destroy();
+    puts("ok");
     auto *eg = new EeyoreGenerator();
-    eg->generateOn(root);
+    std::cout << root->genEeyore(eg)->name()<<std::endl;
+    eg->program()->dump(std::cout);
     /*
     ofstream output;
     Reader reader;
