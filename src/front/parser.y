@@ -32,7 +32,7 @@ void yyerror(const char *s) {
     std::vector<SysYExpression *> *exp_list;
     SysYLVal *lval;
     SysYStatement *stmt;
-    std::vector<SysYStatement *> *stmt_list;
+    std::vector<SysYBlockItem *> *block_list;
     SysYDefine *def;
     std::vector<SysYDefine *> *def_list;
     SysYVarDef *vardef;
@@ -48,12 +48,12 @@ void yyerror(const char *s) {
 %type <exp> Exp Cond PrimaryExp Number UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
 %type <exp_list> FuncRParams ArrayBlock
 %type <lval> LVal
-%type <stmt> Stmt BlockItem Block
-%type <stmt_list> BlockItems
-%type <def> FuncDef ConstDef VarDef
-%type <def_list> DeclDefs Decl ConstDecl ConstDefs VarDecl VarDefs
-%type <vardef> FuncFParam
-%type <vardef_list> FuncFParams
+%type <stmt> Stmt Block
+%type <block_list> BlockItems
+%type <def> FuncDef
+%type <def_list> DeclDefs
+%type <vardef> FuncFParam ConstDef VarDef
+%type <vardef_list> FuncFParams Decl ConstDecl ConstDefs VarDecl VarDefs
 %type <init> InitVal
 %type <init_list> InitVals
 %type <comp_unit> CompUnit
@@ -66,7 +66,7 @@ void yyerror(const char *s) {
 %%
 CompUnit: DeclDefs  { root = $$ = new SysYCompUnit($1); }
 
-DeclDefs: Decl              { $$ = $1; }
+DeclDefs: Decl              { $$ = new std::vector<SysYDefine *>(); $$->insert($$->end(), $1->begin(), $1->end()); delete $1; }
         | FuncDef           { $$ = new std::vector<SysYDefine *>(); $$->push_back($1); }
         | DeclDefs Decl     { $$ = $1; $$->insert($$->end(), $2->begin(), $2->end()); delete $2; }
         | DeclDefs FuncDef  { $$ = $1; $$->push_back($2); }
@@ -77,14 +77,14 @@ Decl: ConstDecl
 ConstDecl: CONST BType ConstDefs ';'    { $$ = $3; }
          ;
 BType: INT;
-ConstDefs: ConstDef                 { $$ = new std::vector<SysYDefine *>; $$->push_back($1); }
+ConstDefs: ConstDef                 { $$ = new std::vector<SysYVarDef *>; $$->push_back($1); }
          | ConstDefs ',' ConstDef   { $$ = $1; $$->push_back($3); }
          ;
 ConstDef: IDENT ArrayBlock '=' InitVal { $$ = new SysYVarDef(true, $1, $2, $4); }
         ;
 VarDecl: BType VarDefs ';'  { $$ = $2; }
        ;
-VarDefs: VarDef             { $$ = new std::vector<SysYDefine *>; $$->push_back($1); }
+VarDefs: VarDef             { $$ = new std::vector<SysYVarDef *>; $$->push_back($1); }
        | VarDefs ',' VarDef { $$ = $1; $$->push_back($3); }
        ;
 VarDef: IDENT ArrayBlock               { $$ = new SysYVarDef(false, $1, $2); }
@@ -111,14 +111,16 @@ FuncFParams: FuncFParam                 { $$ = new std::vector<SysYVarDef *>; $$
            | FuncFParams ',' FuncFParam { $$ = $1; $$->push_back($3); }
            ;
 FuncFParam: BType IDENT                     { $$ = new SysYVarDef(false, $2, new std::vector<SysYExpression *>); }
-          | BType IDENT '[' ']' ArrayBlock  { $5->insert($5->begin(), nullptr); $$ = new SysYVarDef(false, $2, $5); }
+          | BType IDENT '[' ']' ArrayBlock  { $5->insert($5->begin(), new SysYNumber(0)); $$ = new SysYVarDef(false, $2, $5); }
           ;
 
 Block: '{' BlockItems '}'   { $$ = new SysYBlockStmt($2); }
      ;
-BlockItems:                         { $$ = new std::vector<SysYStatement *>; }
-          | BlockItem               { $$ = new std::vector<SysYStatement *>; $$->push_back($1); }
-          | BlockItems BlockItem    { $$ = $1; $$->push_back($2); }
+BlockItems:                 { $$ = new std::vector<SysYBlockItem *>; }
+          | Decl            { $$ = new std::vector<SysYBlockItem *>; $$->insert($$->end(), $1->begin(), $1->end()); delete $1; }
+          | Stmt            { $$ = new std::vector<SysYBlockItem *>; $$->push_back($1); }
+          | BlockItems Decl { $$ = $1; $$->insert($$->end(), $2->begin(), $2->end()); delete $2; }
+          | BlockItems Stmt { $$ = $1; $$->push_back($2); }
           ;
 BlockItem: Decl
          | Stmt

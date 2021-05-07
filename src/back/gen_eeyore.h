@@ -57,13 +57,14 @@ public:
 
 class EeyoreGenerator {
 private:
-    EeyoreProgram *root;
-    int gT_cnt{}, T_cnt{}, t_cnt{}, l_cnt{};
+    std::shared_ptr<EeyoreProgram> root;
+    int gT_cnt{}, T_cnt{}, t_cnt{}, p_cnt{}, l_cnt{};
     NestedMap<std::string, SysY2Eeyore_SymbolEntry> vars;
-    EeyoreFunc *func{};
+    bool flag_param{};
+    std::shared_ptr<EeyoreFunc> func;
     std::map<std::string, std::shared_ptr<EeyoreFunc>> funcs;
 
-    std::shared_ptr<EeyoreValue> logError(const char *msg) {
+    static std::shared_ptr<EeyoreValue> logError(const char *msg) {
         printf("Error(eeyore): %s\n", msg);
         exit(1);
         return nullptr;
@@ -74,10 +75,8 @@ private:
 
 public:
     EeyoreGenerator() {
-        root = new EeyoreProgram();
+        root = std::make_shared<EeyoreProgram>();
     }
-
-    [[nodiscard]] const EeyoreProgram *program() const { return root; }
 
     std::shared_ptr<EeyoreValue> generateOn(const SysYBinary *ast);
 
@@ -105,7 +104,7 @@ public:
 
     std::shared_ptr<EeyoreValue> generateOn(const SysYFuncDef *ast);
 
-    std::shared_ptr<EeyoreValue> generateOn(const SysYCompUnit *ast);
+    std::shared_ptr<EeyoreProgram> generateOn(const SysYCompUnit *ast);
 };
 
 #endif //SYSYCOMPILER_GEN_EEYORE_H

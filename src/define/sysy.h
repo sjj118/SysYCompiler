@@ -113,27 +113,35 @@ public:
     [[nodiscard]] const std::vector<SysYExpression *> &indices() const { return indices_; }
 };
 
-class SysYStatement {
+class SysYBlockItem {
 private:
 public:
-    virtual ~SysYStatement() = default;
+    virtual ~SysYBlockItem() = default;
 
     virtual std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const = 0;
 };
 
+class SysYStatement : public SysYBlockItem {
+private:
+public:
+    ~SysYStatement() override = default;
+
+    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const override = 0;
+};
+
 class SysYBlockStmt : public SysYStatement {
 private:
-    std::vector<SysYStatement *> stmts_;
+    std::vector<SysYBlockItem *> items_;
 public:
     ~SysYBlockStmt() override {
-        for (auto *stmt:stmts_)delete stmt;
+        for (auto *item:items_)delete item;
     }
 
-    explicit SysYBlockStmt(std::vector<SysYStatement *> *stmts) : stmts_(*stmts) { delete stmts; }
+    explicit SysYBlockStmt(std::vector<SysYBlockItem *> *items) : items_(*items) { delete items; }
 
     std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const override;
 
-    [[nodiscard]] const std::vector<SysYStatement *> &stmts() const { return stmts_; }
+    [[nodiscard]] const std::vector<SysYBlockItem *> &items() const { return items_; }
 };
 
 class SysYExpStmt : public SysYStatement {
@@ -254,7 +262,7 @@ public:
     [[nodiscard]] const std::vector<SysYInitVal *> *list() const { return list_; }
 };
 
-class SysYVarDef : public SysYDefine {
+class SysYVarDef : public SysYDefine, public SysYBlockItem {
 private:
     bool is_const_;
     std::string ident_;
@@ -288,15 +296,15 @@ private:
     bool is_void_;
     std::string ident_;
     std::vector<SysYVarDef *> params_;
-    SysYBlockStmt *stmts_;
+    SysYBlockStmt *block_;
 public:
     ~SysYFuncDef() override {
         for (auto *param:params_)delete param;
-        delete stmts_;
+        delete block_;
     }
 
-    SysYFuncDef(bool is_void, std::string *ident, std::vector<SysYVarDef *> *params, SysYBlockStmt *stmts) :
-            is_void_(is_void), ident_(*ident), params_(*params), stmts_(stmts) {
+    SysYFuncDef(bool is_void, std::string *ident, std::vector<SysYVarDef *> *params, SysYBlockStmt *block) :
+            is_void_(is_void), ident_(*ident), params_(*params), block_(block) {
         delete params;
         delete ident;
     }
@@ -309,7 +317,7 @@ public:
 
     [[nodiscard]] const std::vector<SysYVarDef *> &params() const { return params_; }
 
-    [[nodiscard]] const SysYBlockStmt *stmts() const { return stmts_; }
+    [[nodiscard]] const std::vector<SysYBlockItem *> &items() const { return block_->items(); }
 };
 
 class SysYCompUnit {
@@ -322,7 +330,7 @@ public:
 
     explicit SysYCompUnit(std::vector<SysYDefine *> *defs) : defs_(*defs) { delete defs; }
 
-    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const;
+    std::shared_ptr<EeyoreProgram> genEeyore(EeyoreGenerator *gen) const;
 
     [[nodiscard]] const std::vector<SysYDefine *> &defs() const { return defs_; }
 };
