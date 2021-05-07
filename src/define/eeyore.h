@@ -233,7 +233,7 @@ private:
 public:
     EeyoreFunc(std::string ident, int arg_num) : ident_(std::move(ident)), arg_num_(arg_num) {}
 
-    void push_var(const std::shared_ptr<EeyoreDeclaration> &decl) {
+    void push_decl(const std::shared_ptr<EeyoreDeclaration> &decl) {
         decls_.push_back(decl);
     }
 
@@ -258,7 +258,7 @@ private:
 public:
     EeyoreProgram() = default;
 
-    void push_var(const std::shared_ptr<EeyoreDeclaration> &decl) {
+    void push_decl(const std::shared_ptr<EeyoreDeclaration> &decl) {
         decls_.push_back(decl);
     }
 

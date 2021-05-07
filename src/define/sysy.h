@@ -9,7 +9,7 @@
 #include <vector>
 #include <string>
 #include "eeyore.h"
-#include "environment.h"
+#include "nested_map.h"
 
 class EeyoreGenerator;
 
@@ -248,8 +248,6 @@ public:
     explicit SysYInitVal(SysYExpression *exp) : exp_(exp), list_(nullptr) {}
 
     explicit SysYInitVal(std::vector<SysYInitVal *> *list) : exp_(nullptr), list_(list) {}
-
-    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const;
 
     [[nodiscard]] const SysYExpression *exp() const { return exp_; }
 

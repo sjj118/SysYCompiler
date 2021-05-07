@@ -10,7 +10,7 @@ std::string op2str();
 #include <cstdlib>
 #include "sysy.h"
 
-SysYExpression *root;
+SysYCompUnit *root;
 extern int yydebug;
 extern int yylex();
 extern int yyget_lineno();
@@ -62,10 +62,8 @@ void yyerror(const char *s) {
 %nonassoc IFX
 %nonassoc ELSE
 
-%start Start
+%start CompUnit
 %%
-Start: Exp  { root = $1; }
-
 CompUnit: DeclDefs  { root = $$ = new SysYCompUnit($1); }
 
 DeclDefs: Decl              { $$ = $1; }
