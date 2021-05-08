@@ -118,7 +118,7 @@ private:
 public:
     virtual ~SysYBlockItem() = default;
 
-    virtual std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const = 0;
+    virtual void genEeyore(EeyoreGenerator *gen) const = 0;
 };
 
 class SysYStatement : public SysYBlockItem {
@@ -126,7 +126,7 @@ private:
 public:
     ~SysYStatement() override = default;
 
-    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const override = 0;
+    void genEeyore(EeyoreGenerator *gen) const override = 0;
 };
 
 class SysYBlockStmt : public SysYStatement {
@@ -139,7 +139,7 @@ public:
 
     explicit SysYBlockStmt(std::vector<SysYBlockItem *> *items) : items_(*items) { delete items; }
 
-    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const override;
+    void genEeyore(EeyoreGenerator *gen) const override;
 
     [[nodiscard]] const std::vector<SysYBlockItem *> &items() const { return items_; }
 };
@@ -152,7 +152,7 @@ public:
 
     explicit SysYExpStmt(SysYExpression *exp = nullptr) : exp_(exp) {}
 
-    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const override;
+    void genEeyore(EeyoreGenerator *gen) const override;
 
     [[nodiscard]] SysYExpression *exp() const { return exp_; }
 };
@@ -169,7 +169,7 @@ public:
 
     SysYAssignStmt(SysYLVal *lhs, SysYExpression *rhs) : lhs_(lhs), rhs_(rhs) {}
 
-    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const override;
+    void genEeyore(EeyoreGenerator *gen) const override;
 
     [[nodiscard]] const SysYLVal *lhs() const { return lhs_; }
 
@@ -190,7 +190,7 @@ public:
     SysYIfStmt(SysYExpression *cond, SysYStatement *then_stmt, SysYStatement *else_stmt = nullptr) :
             cond_(cond), then_stmt_(then_stmt), else_stmt_(else_stmt) {}
 
-    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const override;
+    void genEeyore(EeyoreGenerator *gen) const override;
 
     [[nodiscard]] const SysYExpression *cond() const { return cond_; }
 
@@ -211,7 +211,7 @@ public:
 
     SysYWhileStmt(SysYExpression *cond, SysYStatement *stmt) : cond_(cond), stmt_(stmt) {}
 
-    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const override;
+    void genEeyore(EeyoreGenerator *gen) const override;
 
     [[nodiscard]] const SysYExpression *cond() const { return cond_; }
 
@@ -227,7 +227,7 @@ public:
 
     explicit SysYControlStmt(int type, SysYExpression *exp = nullptr) : type_(type), exp_(exp) {}
 
-    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const override;
+    void genEeyore(EeyoreGenerator *gen) const override;
 
     [[nodiscard]] int type() const { return type_; }
 
@@ -239,7 +239,7 @@ private:
 public:
     virtual ~SysYDefine() = default;
 
-    virtual std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const = 0;
+    virtual void genEeyore(EeyoreGenerator *gen) const = 0;
 };
 
 class SysYInitVal {
@@ -280,7 +280,7 @@ public:
         delete indices;
     }
 
-    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const override;
+    void genEeyore(EeyoreGenerator *gen) const override;
 
     [[nodiscard]] bool is_const() const { return is_const_; }
 
@@ -309,7 +309,7 @@ public:
         delete ident;
     }
 
-    std::shared_ptr<EeyoreValue> genEeyore(EeyoreGenerator *gen) const override;
+    void genEeyore(EeyoreGenerator *gen) const override;
 
     [[nodiscard]] bool is_void() const { return is_void_; }
 

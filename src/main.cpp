@@ -15,7 +15,6 @@ int main(int argc, const char *argv[]) {
     yylex_destroy();
     auto *eg = new EeyoreGenerator();
     root->genEeyore(eg)->dump(std::cout);
-    puts("done");
     /*
     ofstream output;
     Reader reader;

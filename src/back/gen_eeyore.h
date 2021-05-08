@@ -9,37 +9,21 @@
 #include "sysy.h"
 #include "eeyore.h"
 
+#include <stack>
 #include <utility>
 #include "parser.hpp"
 
-class SysY2Eeyore_SymbolEntry {
+class SysYSymbolEntry {
 private:
     int dim_, size_;
-    int *stride_{};
+    std::vector<int> stride_;
     bool is_const_;
-    int *value_{};
-    std::shared_ptr<EeyoreValue> symbol_;
+    std::vector<int> value_;
 public:
-    ~SysY2Eeyore_SymbolEntry() {
-        delete[] stride_;
-        delete[] value_;
-    }
-
-    SysY2Eeyore_SymbolEntry(int dim, int size, int *stride, bool is_const, int *value,
-                            std::shared_ptr<EeyoreValue> symbol) :
-            dim_(dim), size_(size), stride_(stride), is_const_(is_const), value_(value), symbol_(std::move(symbol)) {}
-
-    SysY2Eeyore_SymbolEntry(const SysY2Eeyore_SymbolEntry &other) :
-            dim_(other.dim_), size_(other.size_),
-            is_const_(other.is_const_), symbol_(other.symbol_) {
-        if (other.stride_) {
-            stride_ = new int[other.dim_];
-            memcpy(stride_, other.stride_, other.dim_ * 4);
-        }
-        if (other.value_) {
-            value_ = new int[other.size_ / 4];
-            memcpy(value_, other.value_, other.size_);
-        }
+    SysYSymbolEntry(int dim, int size, std::vector<int> *stride, bool is_const, std::vector<int> *value) :
+            dim_(dim), size_(size), is_const_(is_const) {
+        if (stride)stride_ = *stride;
+        if (value)value_ = *value;
     }
 
     [[nodiscard]] int dim() const { return dim_; }
@@ -51,18 +35,26 @@ public:
     [[nodiscard]] bool is_const() const { return is_const_; }
 
     [[nodiscard]] int value(int x) const { return value_[x]; }
+};
 
-    [[nodiscard]] const std::shared_ptr<EeyoreValue> &symbol() const { return symbol_; }
+class SysYFuncEntry {
+private:
+    std::vector<SysYSymbolEntry> params_;
+public:
+    void push_param(const SysYSymbolEntry &param) { params_.push_back(param); }
+
+    [[nodiscard]] const std::vector<SysYSymbolEntry> &params() const { return params_; }
 };
 
 class EeyoreGenerator {
 private:
     std::shared_ptr<EeyoreProgram> root;
     int gT_cnt{}, T_cnt{}, t_cnt{}, p_cnt{}, l_cnt{};
-    NestedMap<std::string, SysY2Eeyore_SymbolEntry> vars;
-    bool flag_param{};
+    NestedMap<std::string, std::pair<SysYSymbolEntry, std::shared_ptr<EeyoreValue>>> vars;
     std::shared_ptr<EeyoreFunc> func;
-    std::map<std::string, std::shared_ptr<EeyoreFunc>> funcs;
+    SysYFuncEntry *func_entry{};
+    NestedMap<std::string, SysYFuncEntry> funcs;
+    std::stack<std::shared_ptr<EeyoreLabel>> continue_stack, break_stack;
 
     static std::shared_ptr<EeyoreValue> logError(const char *msg) {
         printf("Error(eeyore): %s\n", msg);
@@ -70,8 +62,8 @@ private:
         return nullptr;
     }
 
-    void generateInit(const std::vector<SysYInitVal *> &inits, int dim, const int *stride,
-                      std::shared_ptr<EeyoreValue> *dst, int begin, int end);
+    void generateInit(const std::vector<SysYInitVal *> &inits, int dim, const std::vector<int> &stride,
+                      std::vector<std::shared_ptr<EeyoreValue>> &dst, int begin, int end);
 
 public:
     EeyoreGenerator() {
@@ -88,21 +80,21 @@ public:
 
     std::shared_ptr<EeyoreValue> generateOn(const SysYLVal *ast);
 
-    std::shared_ptr<EeyoreValue> generateOn(const SysYBlockStmt *ast);
+    void generateOn(const SysYBlockStmt *ast);
 
-    std::shared_ptr<EeyoreValue> generateOn(const SysYExpStmt *ast);
+    void generateOn(const SysYExpStmt *ast);
 
-    std::shared_ptr<EeyoreValue> generateOn(const SysYAssignStmt *ast);
+    void generateOn(const SysYAssignStmt *ast);
 
-    std::shared_ptr<EeyoreValue> generateOn(const SysYIfStmt *ast);
+    void generateOn(const SysYIfStmt *ast);
 
-    std::shared_ptr<EeyoreValue> generateOn(const SysYWhileStmt *ast);
+    void generateOn(const SysYWhileStmt *ast);
 
-    std::shared_ptr<EeyoreValue> generateOn(const SysYControlStmt *ast);
+    void generateOn(const SysYControlStmt *ast);
 
-    std::shared_ptr<EeyoreValue> generateOn(const SysYVarDef *ast);
+    void generateOn(const SysYVarDef *ast);
 
-    std::shared_ptr<EeyoreValue> generateOn(const SysYFuncDef *ast);
+    void generateOn(const SysYFuncDef *ast);
 
     std::shared_ptr<EeyoreProgram> generateOn(const SysYCompUnit *ast);
 };
