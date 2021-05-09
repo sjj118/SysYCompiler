@@ -2,7 +2,7 @@
 // Created by 史记 on 2021/5/1.
 //
 
-#include "sysy.h"
+#include <sysy.h>
 
 #include "gen_eeyore.h"
 #include "operator.h"
