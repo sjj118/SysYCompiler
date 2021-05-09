@@ -14,10 +14,10 @@ extern int yylex_destroy();
 using namespace std;
 
 int main(int argc, const char *argv[]) {
-    ofstream output;
-    FILE *input;
+    ofstream output{};
+    FILE *input{};
     int arg_cnt;
-    int src, target = 3;
+    int src = 0, target = 1;
     bool lex = false;
     for (argc--, argv++; argc; argc -= arg_cnt, argv += arg_cnt) {
         if (strcmp(argv[0], "-S") == 0) {
@@ -38,8 +38,8 @@ int main(int argc, const char *argv[]) {
             arg_cnt = 1;
             string filename = argv[0];
             input = fopen(argv[0], "r");
-            if (filename.substr(filename.size() - 2, 2) == ".c")src = 0;
-            else if (filename.substr(filename.size() - 3, 3) == ".sy")src = 0;
+            if (filename.substr(filename.size() - 2, 2) == ".c" || filename.substr(filename.size() - 3, 3) == ".sy")
+                src = 0;
             else if (filename.substr(filename.size() - 7, 7) == ".eeyore")src = 1;
             else if (filename.substr(filename.size() - 7, 7) == ".tigger")src = 2;
             else {
@@ -49,11 +49,12 @@ int main(int argc, const char *argv[]) {
         }
     }
     if (src == 0 && target == 1) {
-        yyin = input;
+        if (input)yyin = input;
         yyparse();
         yylex_destroy();
         auto *eg = new EeyoreGenerator();
-        root->genEeyore(eg)->dump(output);
+        if (output.is_open())root->genEeyore(eg)->dump(output);
+        else root->genEeyore(eg)->dump(std::cout);
     }
     return 0;
 }

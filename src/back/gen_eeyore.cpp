@@ -79,7 +79,7 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYLVal *ast) {
     auto *it = vars.find(ast->ident());
     auto *entry = &it->first;
     auto symbol = it->second;
-    if (entry->dim()) {
+    if (!ast->indices().empty()) {
         SysYExpression *offset_sysy = new SysYBinary(ast->indices()[0], MUL, new SysYNumber(entry->stride(0)));
         for (int i = 1; i < ast->indices().size(); i++) {
             auto step = new SysYBinary(ast->indices()[i], MUL, new SysYNumber(entry->stride(i)));
