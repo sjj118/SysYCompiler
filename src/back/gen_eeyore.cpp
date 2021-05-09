@@ -80,13 +80,15 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYLVal *ast) {
     auto *entry = &it->first;
     auto symbol = it->second;
     if (!ast->indices().empty()) {
-        SysYExpression *offset_sysy = new SysYBinary(ast->indices()[0], MUL, new SysYNumber(entry->stride(0)));
+        std::shared_ptr<SysYExpression> offset_sysy = std::make_shared<SysYBinary>(
+                ast->indices()[0], MUL,
+                std::make_shared<SysYNumber>(entry->stride(0)));
         for (int i = 1; i < ast->indices().size(); i++) {
-            auto step = new SysYBinary(ast->indices()[i], MUL, new SysYNumber(entry->stride(i)));
-            offset_sysy = new SysYBinary(offset_sysy, ADD, step);
+            auto step = std::make_shared<SysYBinary>(ast->indices()[i], MUL,
+                                                     std::make_shared<SysYNumber>(entry->stride(i)));
+            offset_sysy = std::make_shared<SysYBinary>(offset_sysy, ADD, step);
         }
         auto offset = offset_sysy->genEeyore(this);
-//        delete offset_sysy;
         auto offset_num = std::dynamic_pointer_cast<EeyoreNumber>(offset);
         if (offset_num && entry->is_const()) return std::make_shared<EeyoreNumber>(entry->value(offset_num->num() / 4));
         if (!func)return logError("global expression must be constexpr");
@@ -120,13 +122,14 @@ void EeyoreGenerator::generateOn(const SysYAssignStmt *ast) {
     auto symbol = std::dynamic_pointer_cast<EeyoreSymbol>(it->second);
     std::shared_ptr<EeyoreValue> offset = nullptr;
     if (entry->dim()) {
-        SysYExpression *offset_sysy = new SysYBinary(ast->lhs()->indices()[0], MUL, new SysYNumber(entry->stride(0)));
+        std::shared_ptr<SysYExpression> offset_sysy = std::make_shared<SysYBinary>(
+                ast->lhs()->indices()[0], MUL, std::make_shared<SysYNumber>(entry->stride(0)));
         for (int i = 1; i < ast->lhs()->indices().size(); i++) {
-            auto step = new SysYBinary(ast->lhs()->indices()[i], MUL, new SysYNumber(entry->stride(i)));
-            offset_sysy = new SysYBinary(offset_sysy, ADD, step);
+            auto step = std::make_shared<SysYBinary>(ast->lhs()->indices()[i], MUL,
+                                                     std::make_shared<SysYNumber>(entry->stride(i)));
+            offset_sysy = std::make_shared<SysYBinary>(offset_sysy, ADD, step);
         }
         offset = offset_sysy->genEeyore(this);
-        delete offset_sysy;
         if ((entry->dim() != ast->lhs()->indices().size()))logError("array access with wrong dimension");
     } else if (!ast->lhs()->indices().empty()) logError("scalar variable cannot be accessed with indices");
     if (!func) logError("global expression must be constexpr");
@@ -179,10 +182,11 @@ void EeyoreGenerator::generateOn(const SysYControlStmt *ast) {
     }
 }
 
-void EeyoreGenerator::generateInit(const std::vector<SysYInitVal *> &inits, int dim, const std::vector<int> &stride,
+void EeyoreGenerator::generateInit(const std::vector<std::shared_ptr<SysYInitVal>> &inits, int dim,
+                                   const std::vector<int> &stride,
                                    std::vector<std::shared_ptr<EeyoreValue>> &dst, int begin, int end) {
     if (dim == stride.size()) logError("initexpr too much dimension");
-    for (auto *init:inits) {
+    for (auto init:inits) {
         if (begin >= end) logError("initexpr too long");
         if (init->exp()) {
             dst[begin++] = init->exp()->genEeyore(this);
@@ -278,17 +282,17 @@ void EeyoreGenerator::generateOn(const SysYFuncDef *ast) {
     p_cnt = t_cnt = 0;
     funcs.insert(ast->ident(), SysYFuncEntry(ast->is_void()));
     func_entry = funcs.find(ast->ident());
-    for (auto *param:ast->params())param->genEeyore(this);
+    for (auto param:ast->params())param->genEeyore(this);
     func_entry = nullptr;
-    for (auto *item:ast->items()) item->genEeyore(this);
+    for (auto item:ast->items()) item->genEeyore(this);
     func->push_stmt(std::make_shared<EeyoreReturnStmt>(nullptr));
     vars.unnest();
     func = nullptr;
 }
 
 std::shared_ptr<EeyoreProgram> EeyoreGenerator::generateOn(const SysYCompUnit *ast) {
-    for (auto *def:ast->defs())if (dynamic_cast<SysYVarDef *>(def))def->genEeyore(this);
-    for (auto *def:ast->defs())if (dynamic_cast<SysYFuncDef *>(def))def->genEeyore(this);
+    for (auto def:ast->defs())if (std::dynamic_pointer_cast<SysYVarDef>(def))def->genEeyore(this);
+    for (auto def:ast->defs())if (std::dynamic_pointer_cast<SysYFuncDef>(def))def->genEeyore(this);
     return root;
 }
 

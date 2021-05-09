@@ -85,7 +85,7 @@ private:
         return dst;
     }
 
-    void generateInit(const std::vector<SysYInitVal *> &inits, int dim, const std::vector<int> &stride,
+    void generateInit(const std::vector<std::shared_ptr<SysYInitVal>> &inits, int dim, const std::vector<int> &stride,
                       std::vector<std::shared_ptr<EeyoreValue>> &dst, int begin, int end);
 
 public:

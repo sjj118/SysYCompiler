@@ -29,16 +29,16 @@ void yyerror(const char *s) {
     int token;
     std::string *ident;
     SysYExpression *exp;
-    std::vector<SysYExpression *> *exp_list;
+    std::vector<std::shared_ptr<SysYExpression>> *exp_list;
     SysYLVal *lval;
     SysYStatement *stmt;
-    std::vector<SysYBlockItem *> *block_list;
+    std::vector<std::shared_ptr<SysYBlockItem>> *block_list;
     SysYDefine *def;
-    std::vector<SysYDefine *> *def_list;
+    std::vector<std::shared_ptr<SysYDefine>> *def_list;
     SysYVarDef *vardef;
-    std::vector<SysYVarDef *> *vardef_list;
+    std::vector<std::shared_ptr<SysYVarDef>> *vardef_list;
     SysYInitVal *init;
-    std::vector<SysYInitVal *> *init_list;
+    std::vector<std::shared_ptr<SysYInitVal>> *init_list;
     SysYCompUnit *comp_unit;
 };
 %token <num> INT_CONST
@@ -66,10 +66,10 @@ void yyerror(const char *s) {
 %%
 CompUnit: DeclDefs  { root = $$ = new SysYCompUnit($1); }
 
-DeclDefs: Decl              { $$ = new std::vector<SysYDefine *>(); $$->insert($$->end(), $1->begin(), $1->end()); delete $1; }
-        | FuncDef           { $$ = new std::vector<SysYDefine *>(); $$->push_back($1); }
+DeclDefs: Decl              { $$ = new std::vector<std::shared_ptr<SysYDefine>>(); $$->insert($$->end(), $1->begin(), $1->end()); delete $1; }
+        | FuncDef           { $$ = new std::vector<std::shared_ptr<SysYDefine>>(); $$->push_back(std::shared_ptr<SysYDefine>($1)); }
         | DeclDefs Decl     { $$ = $1; $$->insert($$->end(), $2->begin(), $2->end()); delete $2; }
-        | DeclDefs FuncDef  { $$ = $1; $$->push_back($2); }
+        | DeclDefs FuncDef  { $$ = $1; $$->push_back(std::shared_ptr<SysYDefine>($2)); }
         ;
 Decl: ConstDecl
     | VarDecl
@@ -77,50 +77,50 @@ Decl: ConstDecl
 ConstDecl: CONST BType ConstDefs ';'    { $$ = $3; }
          ;
 BType: INT;
-ConstDefs: ConstDef                 { $$ = new std::vector<SysYVarDef *>; $$->push_back($1); }
-         | ConstDefs ',' ConstDef   { $$ = $1; $$->push_back($3); }
+ConstDefs: ConstDef                 { $$ = new std::vector<std::shared_ptr<SysYVarDef>>; $$->push_back(std::shared_ptr<SysYVarDef>($1)); }
+         | ConstDefs ',' ConstDef   { $$ = $1; $$->push_back(std::shared_ptr<SysYVarDef>($3)); }
          ;
 ConstDef: IDENT ArrayBlock '=' InitVal { $$ = new SysYVarDef(true, $1, $2, $4); }
         ;
 VarDecl: BType VarDefs ';'  { $$ = $2; }
        ;
-VarDefs: VarDef             { $$ = new std::vector<SysYVarDef *>; $$->push_back($1); }
-       | VarDefs ',' VarDef { $$ = $1; $$->push_back($3); }
+VarDefs: VarDef             { $$ = new std::vector<std::shared_ptr<SysYVarDef>>; $$->push_back(std::shared_ptr<SysYVarDef>($1)); }
+       | VarDefs ',' VarDef { $$ = $1; $$->push_back(std::shared_ptr<SysYVarDef>($3)); }
        ;
 VarDef: IDENT ArrayBlock               { $$ = new SysYVarDef(false, $1, $2); }
       | IDENT ArrayBlock '=' InitVal   { $$ = new SysYVarDef(false, $1, $2, $4); }
       ;
 InitVal: Exp                { $$ = new SysYInitVal($1); }
-       | '{' '}'            { $$ = new SysYInitVal(new std::vector<SysYInitVal *>); }
+       | '{' '}'            { $$ = new SysYInitVal(new std::vector<std::shared_ptr<SysYInitVal>>); }
        | '{' InitVals '}'   { $$ = new SysYInitVal($2); }
        ;
-InitVals: InitVal               { $$ = new std::vector<SysYInitVal *>; $$->push_back($1); }
-        | InitVals ',' InitVal  { $$ = $1; $$->push_back($3); }
+InitVals: InitVal               { $$ = new std::vector<std::shared_ptr<SysYInitVal>>; $$->push_back(std::shared_ptr<SysYInitVal>($1)); }
+        | InitVals ',' InitVal  { $$ = $1; $$->push_back(std::shared_ptr<SysYInitVal>($3)); }
         ;
-ArrayBlock:                         { $$ = new std::vector<SysYExpression *>; }
-          | '[' Exp ']'             { $$ = new std::vector<SysYExpression *>; $$->push_back($2); }
-          | ArrayBlock '[' Exp ']'  { $$ = $1; $$->push_back($3); }
+ArrayBlock:                         { $$ = new std::vector<std::shared_ptr<SysYExpression>>; }
+          | '[' Exp ']'             { $$ = new std::vector<std::shared_ptr<SysYExpression>>; $$->push_back(std::shared_ptr<SysYExpression>($2)); }
+          | ArrayBlock '[' Exp ']'  { $$ = $1; $$->push_back(std::shared_ptr<SysYExpression>($3)); }
           ;
 
 FuncDef: BType IDENT '(' FuncFParams ')' Block   { $$ = new SysYFuncDef(false, $2, $4, (SysYBlockStmt *)$6); }
-       | BType IDENT '(' ')' Block               { $$ = new SysYFuncDef(false, $2, new std::vector<SysYVarDef *> , (SysYBlockStmt *)$5); }
+       | BType IDENT '(' ')' Block               { $$ = new SysYFuncDef(false, $2, new std::vector<std::shared_ptr<SysYVarDef>> , (SysYBlockStmt *)$5); }
        | VOID IDENT '(' FuncFParams ')' Block    { $$ = new SysYFuncDef(true, $2, $4, (SysYBlockStmt *)$6); }
-       | VOID IDENT '(' ')' Block                { $$ = new SysYFuncDef(true, $2, new std::vector<SysYVarDef *> , (SysYBlockStmt *)$5); }
+       | VOID IDENT '(' ')' Block                { $$ = new SysYFuncDef(true, $2, new std::vector<std::shared_ptr<SysYVarDef>> , (SysYBlockStmt *)$5); }
 ;
-FuncFParams: FuncFParam                 { $$ = new std::vector<SysYVarDef *>; $$->push_back($1); }
-           | FuncFParams ',' FuncFParam { $$ = $1; $$->push_back($3); }
+FuncFParams: FuncFParam                 { $$ = new std::vector<std::shared_ptr<SysYVarDef>>; $$->push_back(std::shared_ptr<SysYVarDef>($1)); }
+           | FuncFParams ',' FuncFParam { $$ = $1; $$->push_back(std::shared_ptr<SysYVarDef>($3)); }
            ;
-FuncFParam: BType IDENT                     { $$ = new SysYVarDef(false, $2, new std::vector<SysYExpression *>); }
-          | BType IDENT '[' ']' ArrayBlock  { $5->insert($5->begin(), new SysYNumber(0)); $$ = new SysYVarDef(false, $2, $5); }
+FuncFParam: BType IDENT                     { $$ = new SysYVarDef(false, $2, new std::vector<std::shared_ptr<SysYExpression>>); }
+          | BType IDENT '[' ']' ArrayBlock  { $5->insert($5->begin(), std::make_shared<SysYNumber>(0)); $$ = new SysYVarDef(false, $2, $5); }
           ;
 
 Block: '{' BlockItems '}'   { $$ = new SysYBlockStmt($2); }
      ;
-BlockItems:                 { $$ = new std::vector<SysYBlockItem *>; }
-          | Decl            { $$ = new std::vector<SysYBlockItem *>; $$->insert($$->end(), $1->begin(), $1->end()); delete $1; }
-          | Stmt            { $$ = new std::vector<SysYBlockItem *>; $$->push_back($1); }
+BlockItems:                 { $$ = new std::vector<std::shared_ptr<SysYBlockItem>>; }
+          | Decl            { $$ = new std::vector<std::shared_ptr<SysYBlockItem>>; $$->insert($$->end(), $1->begin(), $1->end()); delete $1; }
+          | Stmt            { $$ = new std::vector<std::shared_ptr<SysYBlockItem>>; $$->push_back(std::shared_ptr<SysYBlockItem>($1)); }
           | BlockItems Decl { $$ = $1; $$->insert($$->end(), $2->begin(), $2->end()); delete $2; }
-          | BlockItems Stmt { $$ = $1; $$->push_back($2); }
+          | BlockItems Stmt { $$ = $1; $$->push_back(std::shared_ptr<SysYBlockItem>($2)); }
           ;
 Stmt: LVal '=' Exp ';'                  { $$ = new SysYAssignStmt($1, $3); }
     | ';'                               { $$ = new SysYExpStmt(); }
@@ -146,14 +146,14 @@ PrimaryExp: '(' Exp ')' { $$ = $2; }
           ;
 Number: INT_CONST   { $$ = new SysYNumber($1); };
 UnaryExp: PrimaryExp
-        | IDENT '(' ')'             { $$ = new SysYFunCall($1, new std::vector<SysYExpression *>); }
+        | IDENT '(' ')'             { $$ = new SysYFunCall($1, new std::vector<std::shared_ptr<SysYExpression>>); }
         | IDENT '(' FuncRParams ')' { $$ = new SysYFunCall($1, $3); }
         | ADD UnaryExp              { $$ = new SysYUnary($1, $2); }
         | SUB UnaryExp              { $$ = new SysYUnary($1, $2); }
         | LNOT UnaryExp             { $$ = new SysYUnary($1, $2); }
         ;
-FuncRParams: Exp                    { $$ = new std::vector<SysYExpression *>; $$->push_back($1); }
-           | FuncRParams ',' Exp    { $$ = $1; $$->push_back($3); }
+FuncRParams: Exp                    { $$ = new std::vector<std::shared_ptr<SysYExpression>>; $$->push_back(std::shared_ptr<SysYExpression>($1)); }
+           | FuncRParams ',' Exp    { $$ = $1; $$->push_back(std::shared_ptr<SysYExpression>($3)); }
            ;
 MulExp: UnaryExp
       | MulExp MUL UnaryExp { $$ = new SysYBinary($1, $2, $3); }
