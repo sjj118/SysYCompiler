@@ -5,6 +5,7 @@
 #ifndef SYSYCOMPILER_EEYORE_H
 #define SYSYCOMPILER_EEYORE_H
 
+#include <memory>
 #include <ostream>
 #include <utility>
 
