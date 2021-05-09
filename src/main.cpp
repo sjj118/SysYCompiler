@@ -39,10 +39,13 @@ int main(int argc, const char *argv[]) {
             string filename = argv[0];
             input = fopen(argv[0], "r");
             if (filename.substr(filename.size() - 2, 2) == ".c")src = 0;
-            if (filename.substr(filename.size() - 3, 3) == ".sy")src = 0;
+            else if (filename.substr(filename.size() - 3, 3) == ".sy")src = 0;
             else if (filename.substr(filename.size() - 7, 7) == ".eeyore")src = 1;
             else if (filename.substr(filename.size() - 7, 7) == ".tigger")src = 2;
-            else src = 0;
+            else {
+                cerr << "[error] unknown input file type_.\n";
+                return 2;
+            }
         }
     }
     if (src == 0 && target == 1) {
