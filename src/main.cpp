@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdio>
+#include <cstring>
 #include "sysy.h"
 #include "gen_eeyore.h"
 

@@ -2,6 +2,7 @@
 // Created by 史记 on 2021/5/7.
 //
 
+#include <cassert>
 #include "operator.h"
 #include "parser.tab.hpp"
 
