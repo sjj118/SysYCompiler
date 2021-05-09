@@ -50,9 +50,9 @@ int main(int argc, const char *argv[]) {
     }
     if (src == 0 && target == 1) {
         yyin = input;
+        return 0;
         yyparse();
         yylex_destroy();
-        return 0;
         auto *eg = new EeyoreGenerator();
         root->genEeyore(eg)->dump(output);
     }
