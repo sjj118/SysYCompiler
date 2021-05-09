@@ -39,9 +39,14 @@ public:
 
 class SysYFuncEntry {
 private:
+    bool is_void_;
     std::vector<SysYSymbolEntry> params_;
 public:
+    explicit SysYFuncEntry(bool is_void) : is_void_(is_void) {}
+
     void push_param(const SysYSymbolEntry &param) { params_.push_back(param); }
+
+    [[nodiscard]] bool is_void() const { return is_void_; }
 
     [[nodiscard]] const std::vector<SysYSymbolEntry> &params() const { return params_; }
 };
@@ -62,12 +67,45 @@ private:
         return nullptr;
     }
 
+    std::shared_ptr<EeyoreTempSymbol> newTempSymbol() {
+        auto dst = std::make_shared<EeyoreTempSymbol>(t_cnt++);
+        func->push_decl(std::make_shared<EeyoreDeclaration>(dst));
+        return dst;
+    }
+
+    std::shared_ptr<EeyoreArgSymbol> newArgSymbol() {
+        return std::make_shared<EeyoreArgSymbol>(p_cnt++);
+    }
+
+    std::shared_ptr<EeyorePrimSymbol> newPrimSymbol(int size = 0) {
+        auto dst = std::make_shared<EeyorePrimSymbol>(func ? T_cnt++ : gT_cnt++);
+        auto decl = std::make_shared<EeyoreDeclaration>(dst, size);
+        if (func)func->push_decl(decl);
+        else root->push_decl(decl);
+        return dst;
+    }
+
     void generateInit(const std::vector<SysYInitVal *> &inits, int dim, const std::vector<int> &stride,
                       std::vector<std::shared_ptr<EeyoreValue>> &dst, int begin, int end);
 
 public:
     EeyoreGenerator() {
         root = std::make_shared<EeyoreProgram>();
+        funcs.insert("getint", SysYFuncEntry(false));
+        funcs.insert("getch", SysYFuncEntry(false));
+        SysYFuncEntry getarray(false);
+        getarray.push_param(SysYSymbolEntry(1, 0, new std::vector<int>(1, 4), false, nullptr));
+        funcs.insert("getarray", getarray);
+        SysYFuncEntry putint(true);
+        putint.push_param(SysYSymbolEntry(0, 0, nullptr, false, nullptr));
+        funcs.insert("putint", putint);
+        SysYFuncEntry putch(true);
+        putch.push_param(SysYSymbolEntry(0, 0, nullptr, false, nullptr));
+        funcs.insert("putch", putch);
+        SysYFuncEntry putarray(true);
+        putarray.push_param(SysYSymbolEntry(0, 0, nullptr, false, nullptr));
+        getarray.push_param(SysYSymbolEntry(1, 0, new std::vector<int>(1, 4), false, nullptr));
+        funcs.insert("putarray", putarray);
     }
 
     std::shared_ptr<EeyoreValue> generateOn(const SysYBinary *ast);

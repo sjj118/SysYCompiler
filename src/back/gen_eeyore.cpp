@@ -18,7 +18,7 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYBinary *ast) 
         }
         if (!func)return logError("global expression must be constexpr");
         auto label = std::make_shared<EeyoreLabel>(l_cnt++);
-        auto dst = std::make_shared<EeyoreTempSymbol>(t_cnt++);
+        auto dst = newTempSymbol();
         func->push_stmt(std::make_shared<EeyoreAssignStmt>(dst, lhs));
         func->push_stmt(std::make_shared<EeyoreIfStmt>(
                 op == LAND ? EQ : NEQ, lhs, std::make_shared<EeyoreNumber>(0), label));
@@ -32,8 +32,7 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYBinary *ast) 
     auto rnum = std::dynamic_pointer_cast<EeyoreNumber>(rhs);
     if (!(lnum && rnum)) {
         if (!func)return logError("global expression must be constexpr");
-        auto dst = std::make_shared<EeyoreTempSymbol>(t_cnt++);
-        func->push_decl(std::make_shared<EeyoreDeclaration>(dst));
+        auto dst = newTempSymbol();
         func->push_stmt(std::make_shared<EeyoreBinaryStmt>(op, dst, lhs, rhs));
         return dst;
     }
@@ -49,8 +48,7 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYUnary *ast) {
         if (op == ADD) {
             return rhs;
         } else {
-            auto dst = std::make_shared<EeyoreTempSymbol>(t_cnt++);
-            func->push_decl(std::make_shared<EeyoreDeclaration>(dst));
+            auto dst = newTempSymbol();
             func->push_stmt(std::make_shared<EeyoreUnaryStmt>(op, dst, rhs));
             return dst;
         }
@@ -64,15 +62,16 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYNumber *ast) 
 
 std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYFunCall *ast) {
     auto *entry = funcs.find(ast->ident());
-//    if (ast->params().size() != entry->params().size())return logError("function call arguments number mismatch");
+    if (ast->params().size() != entry->params().size())return logError("function call arguments number mismatch");
     for (int i = 0; i < ast->params().size(); i++) {
         auto arg = ast->params()[i];
 //        auto param = &entry->params()[i];   // todo: check param
         auto assign = std::make_shared<EeyoreParamStmt>(arg->genEeyore(this));
         func->push_stmt(assign);
     }
-    auto dst = std::make_shared<EeyoreTempSymbol>(t_cnt++);
-    func->push_stmt(std::make_shared<EeyoreFunCall>(ast->ident(), dst));
+    std::shared_ptr<EeyoreTempSymbol> dst = nullptr;
+    if (!entry->is_void())dst = newTempSymbol();
+    func->push_stmt(std::make_shared<EeyoreFunCall>("f_" + ast->ident(), dst));
     return dst;
 }
 
@@ -91,7 +90,7 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYLVal *ast) {
         auto offset_num = std::dynamic_pointer_cast<EeyoreNumber>(offset);
         if (offset_num && entry->is_const()) return std::make_shared<EeyoreNumber>(entry->value(offset_num->num() / 4));
         if (!func)return logError("global expression must be constexpr");
-        auto dst = std::make_shared<EeyoreTempSymbol>(t_cnt++);
+        auto dst = newTempSymbol();
         if (entry->dim() == ast->indices().size()) {
             func->push_stmt(std::make_shared<EeyoreAssignStmt>(dst, symbol, nullptr, offset));
         } else {
@@ -199,9 +198,6 @@ void EeyoreGenerator::generateInit(const std::vector<SysYInitVal *> &inits, int 
 void EeyoreGenerator::generateOn(const SysYVarDef *ast) {
     int dim = ast->indices().size();
     if (dim) {
-        std::shared_ptr<EeyoreSymbol> symbol;
-        if (func_entry)symbol = std::make_shared<EeyoreArgSymbol>(p_cnt++);
-        else symbol = std::make_shared<EeyorePrimSymbol>(func ? T_cnt++ : gT_cnt++);
         std::vector<int> stride(dim);
         std::vector<int> indice(dim);
         for (int i = 0; i < dim; i++) {
@@ -214,10 +210,10 @@ void EeyoreGenerator::generateOn(const SysYVarDef *ast) {
             stride[i] = stride[i + 1] * indice[i + 1];
         }
         int size = stride[0] * indice[0];
-        auto decl = std::make_shared<EeyoreDeclaration>(symbol, size);
+        std::shared_ptr<EeyoreSymbol> symbol;
+        if (func_entry)symbol = newArgSymbol();
+        else symbol = newPrimSymbol(size);
         if (func_entry)func_entry->push_param(SysYSymbolEntry(dim, size, &stride, ast->is_const(), nullptr));
-        else if (func)func->push_decl(decl);
-        else root->push_decl(decl);
         if (ast->init()) {
             std::vector<std::shared_ptr<EeyoreValue>> value(size / 4);
             std::vector<int> value_num;
@@ -260,12 +256,9 @@ void EeyoreGenerator::generateOn(const SysYVarDef *ast) {
         return;
     }
     std::shared_ptr<EeyoreSymbol> symbol;
-    if (func_entry)symbol = std::make_shared<EeyoreArgSymbol>(p_cnt++);
-    else symbol = std::make_shared<EeyorePrimSymbol>(func ? T_cnt++ : gT_cnt++);
-    auto decl = std::make_shared<EeyoreDeclaration>(symbol);
+    if (func_entry)symbol = newArgSymbol();
+    else symbol = newPrimSymbol();
     if (func_entry)func_entry->push_param(SysYSymbolEntry(0, 0, nullptr, false, nullptr));
-    else if (func)func->push_decl(decl);
-    else root->push_decl(decl);
     if (ast->init()) {
         if (!ast->init()->exp()) logError("scalar variable must be initialized by scalar");
         auto init = ast->init()->exp()->genEeyore(this);
@@ -283,11 +276,12 @@ void EeyoreGenerator::generateOn(const SysYFuncDef *ast) {
     vars.nest();
     T_cnt = gT_cnt;
     p_cnt = t_cnt = 0;
-    funcs.insert(ast->ident(), SysYFuncEntry());
+    funcs.insert(ast->ident(), SysYFuncEntry(ast->is_void()));
     func_entry = funcs.find(ast->ident());
     for (auto *param:ast->params())param->genEeyore(this);
     func_entry = nullptr;
     for (auto *item:ast->items()) item->genEeyore(this);
+    func->push_stmt(std::make_shared<EeyoreReturnStmt>(nullptr));
     vars.unnest();
     func = nullptr;
 }

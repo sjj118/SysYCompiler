@@ -6,18 +6,15 @@
 
 extern SysYCompUnit *root;
 
+extern FILE *yyin;
+
 extern int yylex_destroy();
 
 using namespace std;
 
 int main(int argc, const char *argv[]) {
-    yyparse();
-    yylex_destroy();
-    auto *eg = new EeyoreGenerator();
-    root->genEeyore(eg)->dump(std::cout);
-    /*
     ofstream output;
-    Reader reader;
+    FILE *input;
     int arg_cnt;
     int src, target = 3;
     bool lex = false;
@@ -39,8 +36,9 @@ int main(int argc, const char *argv[]) {
         } else {
             arg_cnt = 1;
             string filename = argv[0];
-            reader = Reader(filename);
+            input = fopen(argv[0], "r");
             if (filename.substr(filename.size() - 2, 2) == ".c")src = 0;
+            if (filename.substr(filename.size() - 3, 3) == ".sy")src = 0;
             else if (filename.substr(filename.size() - 7, 7) == ".eeyore")src = 1;
             else if (filename.substr(filename.size() - 7, 7) == ".tigger")src = 2;
             else {
@@ -49,18 +47,12 @@ int main(int argc, const char *argv[]) {
             }
         }
     }
-    if (lex) {
-        printf("start lexing from stdin\n");
-        auto lexer = Lexer(reader);
-        while (lexer.token() != Token::End) {
-            std::cout << lexer.toString(lexer.token());
-            if (lexer.token() == Token::Error)return 1;
-            lexer.next();
-        }
-        puts("");
-    } else {
-        printf("compile from stage %d to %d.\n", src, target);
-        // todo
-    }*/
+    if (src == 0 && target == 1) {
+        yyin = input;
+        yyparse();
+        yylex_destroy();
+        auto *eg = new EeyoreGenerator();
+        root->genEeyore(eg)->dump(output);
+    }
     return 0;
 }
