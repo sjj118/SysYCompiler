@@ -5,6 +5,7 @@
 #ifndef SYSYCOMPILER_NESTED_MAP_H
 #define SYSYCOMPILER_NESTED_MAP_H
 
+#include <cassert>
 #include <map>
 
 template<class K, class V>
