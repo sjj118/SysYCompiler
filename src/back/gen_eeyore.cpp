@@ -86,7 +86,7 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYLVal *ast) {
             offset_sysy = new SysYBinary(offset_sysy, ADD, step);
         }
         auto offset = offset_sysy->genEeyore(this);
-        delete offset_sysy;
+//        delete offset_sysy;
         auto offset_num = std::dynamic_pointer_cast<EeyoreNumber>(offset);
         if (offset_num && entry->is_const()) return std::make_shared<EeyoreNumber>(entry->value(offset_num->num() / 4));
         if (!func)return logError("global expression must be constexpr");
