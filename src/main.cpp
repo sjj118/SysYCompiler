@@ -42,13 +42,9 @@ int main(int argc, const char *argv[]) {
             if (filename.substr(filename.size() - 3, 3) == ".sy")src = 0;
             else if (filename.substr(filename.size() - 7, 7) == ".eeyore")src = 1;
             else if (filename.substr(filename.size() - 7, 7) == ".tigger")src = 2;
-            else {
-                cerr << "[error] unknown input file type_.\n";
-                return 1;
-            }
+            else src = 0;
         }
     }
-    return 0;
     if (src == 0 && target == 1) {
         yyin = input;
         yyparse();
