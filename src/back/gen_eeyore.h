@@ -11,7 +11,7 @@
 
 #include <stack>
 #include <utility>
-#include "parser.hpp"
+#include "parser.tab.hpp"
 
 class SysYSymbolEntry {
 private:

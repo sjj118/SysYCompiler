@@ -2,7 +2,7 @@
 #include <string>
 #include <errno.h>
 #include "sysy.h"
-#include "parser.hpp"
+#include "parser.tab.hpp"
 extern int yylex_destroy();
 extern void yyerror(const char *s);
 

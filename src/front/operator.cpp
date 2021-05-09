@@ -3,7 +3,7 @@
 //
 
 #include "operator.h"
-#include "parser.hpp"
+#include "parser.tab.hpp"
 
 #define OPERATORS(e) \
   BINARY_OPERATORS(e) e(LNOT, !)
