@@ -14,6 +14,7 @@ extern int yylex_destroy();
 using namespace std;
 
 int main(int argc, const char *argv[]) {
+    return 0;
     ofstream output;
     FILE *input;
     int arg_cnt;
@@ -50,7 +51,6 @@ int main(int argc, const char *argv[]) {
     }
     if (src == 0 && target == 1) {
         yyin = input;
-        return 0;
         yyparse();
         yylex_destroy();
         auto *eg = new EeyoreGenerator();
