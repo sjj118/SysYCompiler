@@ -52,6 +52,7 @@ int main(int argc, const char *argv[]) {
         yyin = input;
         yyparse();
         yylex_destroy();
+        return 0;
         auto *eg = new EeyoreGenerator();
         root->genEeyore(eg)->dump(output);
     }

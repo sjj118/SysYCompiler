@@ -57,7 +57,7 @@ void yyerror(const char *s) {
 %type <init> InitVal
 %type <init_list> InitVals
 %type <comp_unit> CompUnit
-%type <token> FuncType BType
+%type <token> BType
 
 %nonassoc IFX
 %nonassoc ELSE
@@ -122,9 +122,6 @@ BlockItems:                 { $$ = new std::vector<SysYBlockItem *>; }
           | BlockItems Decl { $$ = $1; $$->insert($$->end(), $2->begin(), $2->end()); delete $2; }
           | BlockItems Stmt { $$ = $1; $$->push_back($2); }
           ;
-BlockItem: Decl
-         | Stmt
-         ;
 Stmt: LVal '=' Exp ';'                  { $$ = new SysYAssignStmt($1, $3); }
     | ';'                               { $$ = new SysYExpStmt(); }
     | Exp ';'                           { $$ = new SysYExpStmt($1); }
