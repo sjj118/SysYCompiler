@@ -14,7 +14,6 @@ extern int yylex_destroy();
 using namespace std;
 
 int main(int argc, const char *argv[]) {
-    return 0;
     ofstream output;
     FILE *input;
     int arg_cnt;
@@ -49,6 +48,7 @@ int main(int argc, const char *argv[]) {
             }
         }
     }
+    return 0;
     if (src == 0 && target == 1) {
         yyin = input;
         yyparse();
