@@ -21,7 +21,7 @@ int text2num(char *text){
 "/*"            BEGIN COMMENT;
 <COMMENT>"*/"   BEGIN INITIAL;
 <COMMENT>.|\n   ;
-"//"[^\n]*      ;
+"//"[^\n\r]*    ;
 ([1-9][0-9]*)|(0[0-7]*)|(0(x|X)[0-9a-fA-F]+)   yylval.num = text2num(yytext); return INT_CONST;
 "const"     return yylval.token = CONST;
 "int"       return yylval.token = INT;
@@ -48,6 +48,6 @@ int text2num(char *text){
 "&&"    return yylval.token = LAND;
 "||"    return yylval.token = LOR;
 [\(\)\[\]\{\},;=]    return yytext[0];
-[ \t\n]             ;
+[ \t\n\r]             ;
 .                   yyerror("unknown token");
 %%
