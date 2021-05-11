@@ -2,12 +2,11 @@
 // Created by 史记 on 2021/5/1.
 //
 
-#include <sysy.h>
-
-#include "gen_eeyore.h"
+#include "sysy.h"
+#include "sysy2eeyore.h"
 #include "operator.h"
 
-std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYBinary *ast) {
+std::shared_ptr<EeyoreValue> S2ETransformer::generateOn(const SysYBinary *ast) {
     int op = ast->op();
     auto lhs = ast->lhs()->genEeyore(this);
     if (op == LAND || op == LOR) {
@@ -39,7 +38,7 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYBinary *ast) 
     return std::make_shared<EeyoreNumber>(calc_bin(op, lnum->num(), rnum->num()));
 }
 
-std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYUnary *ast) {
+std::shared_ptr<EeyoreValue> S2ETransformer::generateOn(const SysYUnary *ast) {
     int op = ast->op();
     auto rhs = ast->rhs()->genEeyore(this);
     auto rnum = std::dynamic_pointer_cast<EeyoreNumber>(rhs);
@@ -56,11 +55,11 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYUnary *ast) {
     return std::make_shared<EeyoreNumber>(calc_un(op, rnum->num()));
 }
 
-std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYNumber *ast) {
+std::shared_ptr<EeyoreValue> S2ETransformer::generateOn(const SysYNumber *ast) {
     return std::make_shared<EeyoreNumber>(ast->num());
 }
 
-std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYFunCall *ast) {
+std::shared_ptr<EeyoreValue> S2ETransformer::generateOn(const SysYFunCall *ast) {
     auto *entry = funcs.find(ast->ident());
     if (ast->params().size() != entry->params().size())return logError("function call arguments number mismatch");
     for (int i = 0; i < ast->params().size(); i++) {
@@ -75,7 +74,7 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYFunCall *ast)
     return dst;
 }
 
-std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYLVal *ast) {
+std::shared_ptr<EeyoreValue> S2ETransformer::generateOn(const SysYLVal *ast) {
     auto *it = vars.find(ast->ident());
     auto *entry = &it->first;
     auto symbol = it->second;
@@ -104,17 +103,17 @@ std::shared_ptr<EeyoreValue> EeyoreGenerator::generateOn(const SysYLVal *ast) {
     return symbol;
 }
 
-void EeyoreGenerator::generateOn(const SysYBlockStmt *ast) {
+void S2ETransformer::generateOn(const SysYBlockStmt *ast) {
     vars.nest();
-    for (auto item:ast->items())item->genEeyore(this);
+    for (const auto& item:ast->items())item->genEeyore(this);
     vars.unnest();
 }
 
-void EeyoreGenerator::generateOn(const SysYExpStmt *ast) {
+void S2ETransformer::generateOn(const SysYExpStmt *ast) {
     ast->exp()->genEeyore(this);
 }
 
-void EeyoreGenerator::generateOn(const SysYAssignStmt *ast) {
+void S2ETransformer::generateOn(const SysYAssignStmt *ast) {
     auto val = ast->rhs()->genEeyore(this);
     auto *it = vars.find(ast->lhs()->ident());
     auto *entry = &it->first;
@@ -136,7 +135,7 @@ void EeyoreGenerator::generateOn(const SysYAssignStmt *ast) {
     func->push_stmt(std::make_shared<EeyoreAssignStmt>(symbol, val, offset));
 }
 
-void EeyoreGenerator::generateOn(const SysYIfStmt *ast) {
+void S2ETransformer::generateOn(const SysYIfStmt *ast) {
     auto cond = ast->cond()->genEeyore(this);
     if (ast->else_stmt()) {
         auto else_label = std::make_shared<EeyoreLabel>(l_cnt++);
@@ -155,7 +154,7 @@ void EeyoreGenerator::generateOn(const SysYIfStmt *ast) {
     }
 }
 
-void EeyoreGenerator::generateOn(const SysYWhileStmt *ast) {
+void S2ETransformer::generateOn(const SysYWhileStmt *ast) {
     auto continue_label = std::make_shared<EeyoreLabel>(l_cnt++);
     auto break_label = std::make_shared<EeyoreLabel>(l_cnt++);
     continue_stack.push(continue_label);
@@ -170,7 +169,7 @@ void EeyoreGenerator::generateOn(const SysYWhileStmt *ast) {
     break_stack.pop();
 }
 
-void EeyoreGenerator::generateOn(const SysYControlStmt *ast) {
+void S2ETransformer::generateOn(const SysYControlStmt *ast) {
     if (ast->type() == RETURN) {
         std::shared_ptr<EeyoreValue> val = nullptr;
         if (ast->exp())val = ast->exp()->genEeyore(this);
@@ -182,11 +181,11 @@ void EeyoreGenerator::generateOn(const SysYControlStmt *ast) {
     }
 }
 
-void EeyoreGenerator::generateInit(const std::vector<std::shared_ptr<SysYInitVal>> &inits, int dim,
-                                   const std::vector<int> &stride,
-                                   std::vector<std::shared_ptr<EeyoreValue>> &dst, int begin, int end) {
+void S2ETransformer::generateInit(const std::vector<std::shared_ptr<SysYInitVal>> &inits, int dim,
+                                  const std::vector<int> &stride,
+                                  std::vector<std::shared_ptr<EeyoreValue>> &dst, int begin, int end) {
     if (dim == stride.size()) logError("initexpr too much dimension");
-    for (auto init:inits) {
+    for (const auto& init:inits) {
         if (begin >= end) logError("initexpr too long");
         if (init->exp()) {
             dst[begin++] = init->exp()->genEeyore(this);
@@ -199,7 +198,7 @@ void EeyoreGenerator::generateInit(const std::vector<std::shared_ptr<SysYInitVal
     while (begin < end) dst[begin++] = std::make_shared<EeyoreNumber>(0);
 }
 
-void EeyoreGenerator::generateOn(const SysYVarDef *ast) {
+void S2ETransformer::generateOn(const SysYVarDef *ast) {
     int dim = ast->indices().size();
     if (dim) {
         std::vector<int> stride(dim);
@@ -217,7 +216,7 @@ void EeyoreGenerator::generateOn(const SysYVarDef *ast) {
         std::shared_ptr<EeyoreSymbol> symbol;
         if (func_entry)symbol = newArgSymbol();
         else symbol = newPrimSymbol(size);
-        if (func_entry)func_entry->push_param(SysYSymbolEntry(dim, size, &stride, ast->is_const(), nullptr));
+        if (func_entry)func_entry->push_param(S2ESymbolEntry(dim, size, &stride, ast->is_const(), nullptr));
         if (ast->init()) {
             std::vector<std::shared_ptr<EeyoreValue>> value(size / 4);
             std::vector<int> value_num;
@@ -241,12 +240,12 @@ void EeyoreGenerator::generateOn(const SysYVarDef *ast) {
                 }
             }
             if (!vars.insert(ast->ident(),
-                             std::make_pair(SysYSymbolEntry(dim, size, &stride, ast->is_const(), &value_num), symbol)))
+                             std::make_pair(S2ESymbolEntry(dim, size, &stride, ast->is_const(), &value_num), symbol)))
                 logError("redefinition of same variable");
             return;
         }
         if (ast->is_const()) logError("const variable must be initialized");
-        if (!vars.insert(ast->ident(), std::make_pair(SysYSymbolEntry(dim, size, &stride, false, nullptr), symbol)))
+        if (!vars.insert(ast->ident(), std::make_pair(S2ESymbolEntry(dim, size, &stride, false, nullptr), symbol)))
             logError("redefinition of same variable");
         return;
     }
@@ -255,14 +254,14 @@ void EeyoreGenerator::generateOn(const SysYVarDef *ast) {
         if (!ast->init()->exp()) logError("scalar variable must be initialized by scalar");
         auto num = std::dynamic_pointer_cast<EeyoreNumber>(ast->init()->exp()->genEeyore(this));
         if (!num) logError("const variable must be initialized with constexpr");
-        if (!vars.insert(ast->ident(), std::make_pair(SysYSymbolEntry(0, 0, nullptr, true, nullptr), num)))
+        if (!vars.insert(ast->ident(), std::make_pair(S2ESymbolEntry(0, 0, nullptr, true, nullptr), num)))
             logError("redefinition of same variable");
         return;
     }
     std::shared_ptr<EeyoreSymbol> symbol;
     if (func_entry)symbol = newArgSymbol();
     else symbol = newPrimSymbol();
-    if (func_entry)func_entry->push_param(SysYSymbolEntry(0, 0, nullptr, false, nullptr));
+    if (func_entry)func_entry->push_param(S2ESymbolEntry(0, 0, nullptr, false, nullptr));
     if (ast->init()) {
         if (!ast->init()->exp()) logError("scalar variable must be initialized by scalar");
         auto init = ast->init()->exp()->genEeyore(this);
@@ -270,56 +269,56 @@ void EeyoreGenerator::generateOn(const SysYVarDef *ast) {
         if (func)func->push_stmt(assign);
         else root->push_init(assign);
     }
-    if (!vars.insert(ast->ident(), std::make_pair(SysYSymbolEntry(0, 0, nullptr, false, nullptr), symbol)))
+    if (!vars.insert(ast->ident(), std::make_pair(S2ESymbolEntry(0, 0, nullptr, false, nullptr), symbol)))
         logError("redefinition of same variable");
 }
 
-void EeyoreGenerator::generateOn(const SysYFuncDef *ast) {
+void S2ETransformer::generateOn(const SysYFuncDef *ast) {
     func = std::make_shared<EeyoreFunc>("f_" + ast->ident(), ast->params().size());
     root->push_func(func);
     vars.nest();
     T_cnt = gT_cnt;
     p_cnt = t_cnt = 0;
-    funcs.insert(ast->ident(), SysYFuncEntry(ast->is_void()));
+    funcs.insert(ast->ident(), S2EFuncEntry(ast->is_void()));
     func_entry = funcs.find(ast->ident());
-    for (auto param:ast->params())param->genEeyore(this);
+    for (const auto& param:ast->params())param->genEeyore(this);
     func_entry = nullptr;
-    for (auto item:ast->items()) item->genEeyore(this);
+    for (const auto& item:ast->items()) item->genEeyore(this);
     func->push_stmt(std::make_shared<EeyoreReturnStmt>(nullptr));
     vars.unnest();
     func = nullptr;
 }
 
-std::shared_ptr<EeyoreProgram> EeyoreGenerator::generateOn(const SysYCompUnit *ast) {
-    for (auto def:ast->defs())if (std::dynamic_pointer_cast<SysYVarDef>(def))def->genEeyore(this);
-    for (auto def:ast->defs())if (std::dynamic_pointer_cast<SysYFuncDef>(def))def->genEeyore(this);
+std::shared_ptr<EeyoreProgram> S2ETransformer::generateOn(const SysYCompUnit *ast) {
+    for (const auto& def:ast->defs())if (std::dynamic_pointer_cast<SysYVarDef>(def))def->genEeyore(this);
+    for (const auto& def:ast->defs())if (std::dynamic_pointer_cast<SysYFuncDef>(def))def->genEeyore(this);
     return root;
 }
 
-std::shared_ptr<EeyoreValue> SysYBinary::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+std::shared_ptr<EeyoreValue> SysYBinary::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-std::shared_ptr<EeyoreValue> SysYUnary::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+std::shared_ptr<EeyoreValue> SysYUnary::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-std::shared_ptr<EeyoreValue> SysYNumber::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+std::shared_ptr<EeyoreValue> SysYNumber::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-std::shared_ptr<EeyoreValue> SysYFunCall::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+std::shared_ptr<EeyoreValue> SysYFunCall::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-std::shared_ptr<EeyoreValue> SysYLVal::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+std::shared_ptr<EeyoreValue> SysYLVal::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-void SysYBlockStmt::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+void SysYBlockStmt::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-void SysYExpStmt::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+void SysYExpStmt::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-void SysYAssignStmt::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+void SysYAssignStmt::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-void SysYIfStmt::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+void SysYIfStmt::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-void SysYWhileStmt::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+void SysYWhileStmt::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-void SysYControlStmt::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+void SysYControlStmt::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-void SysYVarDef::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+void SysYVarDef::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-void SysYFuncDef::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+void SysYFuncDef::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }
 
-std::shared_ptr<EeyoreProgram> SysYCompUnit::genEeyore(EeyoreGenerator *gen) const { return gen->generateOn(this); }
+std::shared_ptr<EeyoreProgram> SysYCompUnit::genEeyore(S2ETransformer *gen) const { return gen->generateOn(this); }

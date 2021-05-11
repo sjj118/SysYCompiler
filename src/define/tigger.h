@@ -5,11 +5,11 @@
 #ifndef SYSYCOMPILER_TIGGER_H
 #define SYSYCOMPILER_TIGGER_H
 
-#endif //SYSYCOMPILER_TIGGER_H
-
+#include <vector>
 #include <memory>
 #include <ostream>
 #include <utility>
+#include "operator.h"
 
 class TiggerValue {
 private:
@@ -42,7 +42,7 @@ private:
 public:
     TiggerReg(char prefix, int id) : prefix_(prefix), id_(id) {};
 
-    [[nodiscard]] char prefix() const override { return prefix_; }
+    [[nodiscard]] char prefix() const { return prefix_; }
 
     [[nodiscard]] int id() const { return id_; }
 
@@ -194,7 +194,7 @@ public:
 class TiggerReturnStmt : public TiggerStatement {
 private:
 public:
-    static void dump(std::ostream &os, const char prefix[]) override {
+    void dump(std::ostream &os, const char prefix[]) const override {
         os << prefix << "return" << std::endl;
     }
 };
@@ -253,7 +253,7 @@ public:
 
     void dump(std::ostream &os) const {
         os << ident_ << " [" << arg_num_ << "] [" << slot_num_ << "]" << std::endl;
-        for (auto stmt:stmts_)stmt->dump(os, "  ");
+        for (const auto &stmt:stmts_)stmt->dump(os, "  ");
         os << "end " << ident_ << std::endl;
     }
 };
@@ -272,8 +272,10 @@ public:
     }
 
     void dump(std::ostream &os) const {
-        for (auto decl:decls_)decl->dump(os, "");
+        for (const auto &decl:decls_)decl->dump(os);
         os << std::endl;
-        for (auto func:funcs_)func->dump(os), os << std::endl;
+        for (const auto &func:funcs_)func->dump(os), os << std::endl;
     }
 };
+
+#endif //SYSYCOMPILER_TIGGER_H

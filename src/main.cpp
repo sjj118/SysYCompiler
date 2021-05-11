@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include "sysy.h"
-#include "gen_eeyore.h"
+#include "sysy2eeyore.h"
 
 extern SysYCompUnit *root;
 
@@ -52,7 +52,7 @@ int main(int argc, const char *argv[]) {
         if (input)yyin = input;
         yyparse();
         yylex_destroy();
-        auto *eg = new EeyoreGenerator();
+        auto *eg = new S2ETransformer();
         if (output.is_open())root->genEeyore(eg)->dump(output);
         else root->genEeyore(eg)->dump(std::cout);
     }

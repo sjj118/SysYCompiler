@@ -13,4 +13,4 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(src src/define src/front src/back)
 
 add_executable(SysYCompiler ${BISON_parser_OUTPUTS} ${FLEX_scanner_OUTPUTS}
-        src/main.cpp src/define/sysy.h src/back/nested_map.h src/define/eeyore.h src/back/gen_eeyore.h src/back/gen_eeyore.cpp src/define/tigger.h src/front/operator.cpp src/front/operator.h)
+        src/main.cpp src/define/sysy.h src/back/nested_map.h src/define/eeyore.h src/back/sysy2eeyore.h src/back/sysy2eeyore.cpp src/define/tigger.h src/front/operator.cpp src/front/operator.h src/back/eeyore2tigger.cpp src/back/eeyore2tigger.h)
