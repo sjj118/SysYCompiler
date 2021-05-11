@@ -14,7 +14,7 @@ extern std::string op2str(int op);
 class EeyoreValue {
 private:
 public:
-    virtual std::string name() = 0;
+    [[nodiscard]] virtual std::string name() const = 0;
 };
 
 class EeyoreNumber : public EeyoreValue {
@@ -25,7 +25,7 @@ public:
 
     [[nodiscard]] int num() const { return num_; }
 
-    std::string name() override { return std::to_string(num_); }
+    [[nodiscard]]std::string name() const override { return std::to_string(num_); }
 };
 
 class EeyoreSymbol : public EeyoreValue {
@@ -38,7 +38,7 @@ public:
 
     [[nodiscard]] int id() const { return id_; }
 
-    std::string name() override { return prefix() + std::to_string(id_); }
+    [[nodiscard]] std::string name() const override { return prefix() + std::to_string(id_); }
 };
 
 class EeyorePrimSymbol : public EeyoreSymbol {
