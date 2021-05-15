@@ -8,10 +8,8 @@
 #include "nested_map.h"
 #include "sysy.h"
 #include "eeyore.h"
-
 #include <stack>
 #include <utility>
-#include "parser.tab.hpp"
 
 class S2ESymbolEntry {
 private:

@@ -5,6 +5,7 @@
 #include "sysy.h"
 #include "sysy2eeyore.h"
 #include "operator.h"
+#include "parser.tab.hpp"
 
 std::shared_ptr<EeyoreValue> S2ETransformer::generateOn(const SysYBinary *ast) {
     int op = ast->op();

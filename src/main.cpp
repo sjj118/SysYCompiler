@@ -2,8 +2,12 @@
 #include <fstream>
 #include <cstdio>
 #include <cstring>
+#include "parser.tab.hpp"
 #include "sysy.h"
+#include "eeyore.h"
+#include "tigger.h"
 #include "sysy2eeyore.h"
+#include "eeyore2tigger.h"
 
 extern SysYCompUnit *root;
 
@@ -17,7 +21,7 @@ int main(int argc, const char *argv[]) {
     ofstream output{};
     FILE *input{};
     int arg_cnt;
-    int src = 0, target = 1;
+    int src = 0, target = 3;
     bool lex = false;
     for (argc--, argv++; argc; argc -= arg_cnt, argv += arg_cnt) {
         if (strcmp(argv[0], "-S") == 0) {
@@ -48,13 +52,24 @@ int main(int argc, const char *argv[]) {
             }
         }
     }
-    if (src == 0 && target == 1) {
+    if (src == 0) {
         if (input)yyin = input;
         yyparse();
         yylex_destroy();
-        auto *eg = new S2ETransformer();
-        if (output.is_open())root->genEeyore(eg)->dump(output);
-        else root->genEeyore(eg)->dump(std::cout);
+        auto eg = new S2ETransformer();
+        auto eeyore = root->genEeyore(eg);
+        if (target == 1) {
+            if (output.is_open())eeyore->dump(output);
+            else eeyore->dump(std::cout);
+            return 0;
+        }
+        auto tg = new E2TTransformer();
+        auto tigger = eeyore->genTigger(tg);
+        if (target == 2) {
+            if (output.is_open())tigger->dump(output);
+            else tigger->dump(std::cout);
+            return 0;
+        }
     }
     return 0;
 }

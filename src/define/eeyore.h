@@ -92,8 +92,6 @@ public:
         if (size_)os << size_ << " ";
         os << symbol_->name() << std::endl;
     }
-
-    void genTigger(E2TTransformer *gen) const;
 };
 
 class EeyoreStatement {
@@ -256,14 +254,14 @@ public:
 class EeyoreFunCall : public EeyoreStatement {
 private:
     std::string ident_;
-    std::shared_ptr<EeyoreValue> dst_;
+    std::shared_ptr<EeyoreSymbol> dst_;
 public:
-    explicit EeyoreFunCall(std::string ident, std::shared_ptr<EeyoreValue> dst = nullptr) :
+    explicit EeyoreFunCall(std::string ident, std::shared_ptr<EeyoreSymbol> dst = nullptr) :
             ident_(std::move(ident)), dst_(std::move(dst)) {}
 
     [[nodiscard]] const std::string &ident() const { return ident_; }
 
-    [[nodiscard]] const std::shared_ptr<EeyoreValue> &dst() const { return dst_; }
+    [[nodiscard]] const std::shared_ptr<EeyoreSymbol> &dst() const { return dst_; }
 
     void dump(std::ostream &os, const char prefix[]) const override {
         os << prefix;
