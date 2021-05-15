@@ -138,8 +138,8 @@ std::shared_ptr<TiggerProgram> E2TTransformer::generateOn(const EeyoreProgram *a
     }
     std::shared_ptr<TiggerVariable> last = nullptr;
     for (const auto &init:ast->inits()) {
-        int num = std::dynamic_pointer_cast<EeyoreNumber>(init->val())->num();
         auto t0 = std::make_shared<TiggerReg>("t0");
+        int num = std::dynamic_pointer_cast<EeyoreNumber>(init->val())->num();
         if (!init->dst_offset()) {
             decls[init->dst()->name()]->set_init(num);
         } else {
@@ -149,8 +149,8 @@ std::shared_ptr<TiggerProgram> E2TTransformer::generateOn(const EeyoreProgram *a
                 last = var;
             }
             int offset = std::dynamic_pointer_cast<EeyoreNumber>(init->dst_offset())->num();
-            inits.push_back(std::make_shared<TiggerAssignStmt>(REG.t0, std::make_shared<TiggerNum>(num),
-                                                               std::make_shared<TiggerNum>(offset)));
+            inits.push_back(std::make_shared<TiggerAssignStmt>(REG.t1, std::make_shared<TiggerNum>(num)));
+            inits.push_back(std::make_shared<TiggerAssignStmt>(REG.t0, REG.t1, std::make_shared<TiggerNum>(offset)));
         }
     }
     for (const auto &it:decls)root->push_decl(it.second);
