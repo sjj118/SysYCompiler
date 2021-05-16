@@ -64,7 +64,7 @@ void TiggerBinaryStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const 
     auto rhs_num = std::dynamic_pointer_cast<TiggerNum>(rhs_);
     auto rhs = std::dynamic_pointer_cast<TiggerReg>(rhs_);
     if (rhs_num) {
-        if ((op_ == ADD || op_ == LESS) && (rhs_num->num() < -2048 || rhs_num->num() > 2047)) {
+        if ((op_ == ADD || op_ == LESS) && rhs_num->num() >= -2048 && rhs_num->num() <= 2047) {
             os.width(12);
             if (op_ == ADD)os << "  addi";
             else os << "  slti";
