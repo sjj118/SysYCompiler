@@ -71,7 +71,7 @@ std::shared_ptr<EeyoreValue> S2ETransformer::generateOn(const SysYFunCall *ast) 
     }
     std::shared_ptr<EeyoreTempSymbol> dst = nullptr;
     if (!entry->is_void())dst = newTempSymbol();
-    func->push_stmt(std::make_shared<EeyoreFunCall>("f_" + ast->ident(), dst));
+    func->push_stmt(std::make_shared<EeyoreFunCall>(ast->ident(), dst));
     return dst;
 }
 
@@ -106,7 +106,7 @@ std::shared_ptr<EeyoreValue> S2ETransformer::generateOn(const SysYLVal *ast) {
 
 void S2ETransformer::generateOn(const SysYBlockStmt *ast) {
     vars.nest();
-    for (const auto& item:ast->items())item->genEeyore(this);
+    for (const auto &item:ast->items())item->genEeyore(this);
     vars.unnest();
 }
 
@@ -186,7 +186,7 @@ void S2ETransformer::generateInit(const std::vector<std::shared_ptr<SysYInitVal>
                                   const std::vector<int> &stride,
                                   std::vector<std::shared_ptr<EeyoreValue>> &dst, int begin, int end) {
     if (dim == stride.size()) logError("initexpr too much dimension");
-    for (const auto& init:inits) {
+    for (const auto &init:inits) {
         if (begin >= end) logError("initexpr too long");
         if (init->exp()) {
             dst[begin++] = init->exp()->genEeyore(this);
@@ -275,24 +275,24 @@ void S2ETransformer::generateOn(const SysYVarDef *ast) {
 }
 
 void S2ETransformer::generateOn(const SysYFuncDef *ast) {
-    func = std::make_shared<EeyoreFunc>("f_" + ast->ident(), ast->params().size());
+    func = std::make_shared<EeyoreFunc>(ast->ident(), ast->params().size());
     root->push_func(func);
     vars.nest();
     T_cnt = gT_cnt;
     p_cnt = t_cnt = 0;
     funcs.insert(ast->ident(), S2EFuncEntry(ast->is_void()));
     func_entry = funcs.find(ast->ident());
-    for (const auto& param:ast->params())param->genEeyore(this);
+    for (const auto &param:ast->params())param->genEeyore(this);
     func_entry = nullptr;
-    for (const auto& item:ast->items()) item->genEeyore(this);
+    for (const auto &item:ast->items()) item->genEeyore(this);
     func->push_stmt(std::make_shared<EeyoreReturnStmt>(nullptr));
     vars.unnest();
     func = nullptr;
 }
 
 std::shared_ptr<EeyoreProgram> S2ETransformer::generateOn(const SysYCompUnit *ast) {
-    for (const auto& def:ast->defs())if (std::dynamic_pointer_cast<SysYVarDef>(def))def->genEeyore(this);
-    for (const auto& def:ast->defs())if (std::dynamic_pointer_cast<SysYFuncDef>(def))def->genEeyore(this);
+    for (const auto &def:ast->defs())if (std::dynamic_pointer_cast<SysYVarDef>(def))def->genEeyore(this);
+    for (const auto &def:ast->defs())if (std::dynamic_pointer_cast<SysYFuncDef>(def))def->genEeyore(this);
     return root;
 }
 

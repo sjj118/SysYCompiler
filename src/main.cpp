@@ -70,6 +70,8 @@ int main(int argc, const char *argv[]) {
             else tigger->dump(std::cout);
             return 0;
         }
+        if (output.is_open())tigger->dumpRISC(output);
+        else tigger->dumpRISC(std::cout);
     }
     return 0;
 }

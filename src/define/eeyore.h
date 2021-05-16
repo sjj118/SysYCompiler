@@ -266,7 +266,7 @@ public:
     void dump(std::ostream &os, const char prefix[]) const override {
         os << prefix;
         if (dst_)os << dst_->name() << " = ";
-        os << "call " << ident_ << std::endl;
+        os << "call " << "f_" + ident_ << std::endl;
     }
 
     void genTigger(E2TTransformer *gen) const override;
@@ -315,11 +315,11 @@ public:
     }
 
     void dump(std::ostream &os) const {
-        os << ident_ << " [" << arg_num_ << "]" << std::endl;
+        os << "f_" + ident_ << " [" << arg_num_ << "]" << std::endl;
         for (const auto &decl:decls_)decl->dump(os, "  ");
         os << std::endl;
         for (const auto &stmt:stmts_)stmt->dump(os, "  ");
-        os << "end " << ident_ << std::endl;
+        os << "end " << "f_" + ident_ << std::endl;
     }
 
     void genTigger(E2TTransformer *gen) const;

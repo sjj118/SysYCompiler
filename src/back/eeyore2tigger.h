@@ -66,9 +66,7 @@ private:
     } REG;
 
     template<class Tp, class ...Args>
-    void new_stmt(const Args &...args) {
-        func->push_stmt(std::make_shared<Tp>(args...));
-    }
+    void new_stmt(const Args &...args) { func->push_stmt(std::make_shared<Tp>(args...)); }
 
     void load(const std::shared_ptr<EeyoreValue> &val, const std::shared_ptr<TiggerReg> &reg);
 

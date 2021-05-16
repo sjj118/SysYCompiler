@@ -86,6 +86,7 @@ private:
     void generateInit(const std::vector<std::shared_ptr<SysYInitVal>> &inits, int dim, const std::vector<int> &stride,
                       std::vector<std::shared_ptr<EeyoreValue>> &dst, int begin, int end);
 
+    void branchJmp();
 public:
     S2ETransformer() {
         root = std::make_shared<EeyoreProgram>();

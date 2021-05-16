@@ -6,6 +6,7 @@
 #include "eeyore.h"
 #include "operator.h"
 #include "parser.tab.hpp"
+#include <cassert>
 
 void E2TTransformer::load(const std::shared_ptr<EeyoreValue> &val, const std::shared_ptr<TiggerReg> &reg) {
     auto num = std::dynamic_pointer_cast<EeyoreNumber>(val);
@@ -26,65 +27,76 @@ void E2TTransformer::load(const std::shared_ptr<EeyoreValue> &val, const std::sh
 void E2TTransformer::store(const std::shared_ptr<TiggerReg> &reg, const std::shared_ptr<EeyoreSymbol> &symbol) {
     auto entry = vars.find(symbol->name());
     if (entry->var()) {
-        new_stmt<TiggerLoadaddrStmt>(entry->var(), REG.t6);
-        new_stmt<TiggerAssignStmt>(REG.t6, reg, std::make_shared<TiggerNum>(0));
+        assert(reg != REG.t2);
+        new_stmt<TiggerLoadaddrStmt>(entry->var(), REG.t2);
+        new_stmt<TiggerAssignStmt>(REG.t2, reg, std::make_shared<TiggerNum>(0));
     } else new_stmt<TiggerStoreStmt>(reg, entry->offset());
 }
 
 void E2TTransformer::generateOn(const EeyoreBinaryStmt *ast) {
-    load(ast->lhs(), REG.t1);
-    auto rhs_num = std::dynamic_pointer_cast<EeyoreNumber>(ast->rhs());
+    auto lhs = ast->lhs();
+    auto rhs = ast->rhs();
+    auto op = ast->op();
+    auto lhs_num = std::dynamic_pointer_cast<EeyoreNumber>(lhs);
+    auto rhs_num = std::dynamic_pointer_cast<EeyoreNumber>(rhs);
+    if (lhs_num && !rhs_num && (op == ADD || op == GREAT)) {
+        std::swap(lhs, rhs);
+        std::swap(lhs_num, rhs_num);
+        if (op == GREAT)op = LESS;
+    }
+    load(lhs, REG.t1);
     if (rhs_num) {
         auto t2 = std::make_shared<TiggerNum>(rhs_num->num());
-        new_stmt<TiggerBinaryStmt>(ast->op(), REG.t0, REG.t1, t2);
+        new_stmt<TiggerBinaryStmt>(op, REG.t1, REG.t1, t2);
     } else {
-        load(ast->rhs(), REG.t2);
-        new_stmt<TiggerBinaryStmt>(ast->op(), REG.t0, REG.t1, REG.t2);
+        load(rhs, REG.t2);
+        new_stmt<TiggerBinaryStmt>(op, REG.t1, REG.t1, REG.t2);
     }
-    store(REG.t0, ast->dst());
+    store(REG.t1, ast->dst());
 }
 
 void E2TTransformer::generateOn(const EeyoreUnaryStmt *ast) {
     load(ast->rhs(), REG.t1);
-    new_stmt<TiggerUnaryStmt>(ast->op(), REG.t0, REG.t1);
-    store(REG.t0, ast->dst());
+    new_stmt<TiggerUnaryStmt>(ast->op(), REG.t1, REG.t1);
+    store(REG.t1, ast->dst());
 }
 
 void E2TTransformer::generateOn(const EeyoreAssignStmt *ast) {
     if (ast->dst_offset()) {
         auto offset_num = std::dynamic_pointer_cast<EeyoreNumber>(ast->dst_offset());
-        load(ast->dst(), REG.t0);
-        load(ast->val(), REG.t1);
+        load(ast->dst(), REG.t1);
         if (offset_num) {
+            load(ast->val(), REG.t2);
             auto offset = std::make_shared<TiggerNum>(offset_num->num());
-            new_stmt<TiggerAssignStmt>(REG.t0, REG.t1, offset);
+            new_stmt<TiggerAssignStmt>(REG.t1, REG.t2, offset);
         } else {
             load(ast->dst_offset(), REG.t2);
-            new_stmt<TiggerBinaryStmt>(ADD, REG.t0, REG.t0, REG.t2);
-            new_stmt<TiggerAssignStmt>(REG.t0, REG.t1, std::make_shared<TiggerNum>(0));
+            new_stmt<TiggerBinaryStmt>(ADD, REG.t1, REG.t1, REG.t2);
+            load(ast->val(), REG.t2);
+            new_stmt<TiggerAssignStmt>(REG.t1, REG.t2, std::make_shared<TiggerNum>(0));
         }
     } else if (ast->val_offset()) {
         load(ast->val(), REG.t1);
         auto offset_num = std::dynamic_pointer_cast<EeyoreNumber>(ast->val_offset());
         if (offset_num) {
             auto offset = std::make_shared<TiggerNum>(offset_num->num());
-            new_stmt<TiggerAssignStmt>(REG.t0, REG.t1, nullptr, offset);
+            new_stmt<TiggerAssignStmt>(REG.t1, REG.t1, nullptr, offset);
         } else {
             load(ast->val_offset(), REG.t2);
             new_stmt<TiggerBinaryStmt>(ADD, REG.t1, REG.t1, REG.t2);
-            new_stmt<TiggerAssignStmt>(REG.t0, REG.t1, nullptr, std::make_shared<TiggerNum>(0));
+            new_stmt<TiggerAssignStmt>(REG.t1, REG.t1, nullptr, std::make_shared<TiggerNum>(0));
         }
-        store(REG.t0, ast->dst());
+        store(REG.t1, ast->dst());
     } else {
-        load(ast->val(), REG.t0);
-        store(REG.t0, ast->dst());
+        load(ast->val(), REG.t1);
+        store(REG.t1, ast->dst());
     }
 }
 
 void E2TTransformer::generateOn(const EeyoreIfStmt *ast) {
-    load(ast->lhs(), REG.t0);
-    load(ast->rhs(), REG.t1);
-    new_stmt<TiggerIfStmt>(ast->op(), REG.t0, REG.t1, std::make_shared<TiggerLabel>(ast->label()->id()));
+    load(ast->lhs(), REG.t1);
+    load(ast->rhs(), REG.t2);
+    new_stmt<TiggerIfStmt>(ast->op(), REG.t1, REG.t2, std::make_shared<TiggerLabel>(ast->label()->id()));
 }
 
 void E2TTransformer::generateOn(const EeyoreGotoStmt *ast) {
@@ -145,12 +157,12 @@ std::shared_ptr<TiggerProgram> E2TTransformer::generateOn(const EeyoreProgram *a
         } else {
             auto var = decls[init->dst()->name()]->var();
             if (var != last) {
-                inits.push_back(std::make_shared<TiggerLoadaddrStmt>(var, REG.t0));
+                inits.push_back(std::make_shared<TiggerLoadaddrStmt>(var, REG.t1));
                 last = var;
             }
             int offset = std::dynamic_pointer_cast<EeyoreNumber>(init->dst_offset())->num();
-            inits.push_back(std::make_shared<TiggerAssignStmt>(REG.t1, std::make_shared<TiggerNum>(num)));
-            inits.push_back(std::make_shared<TiggerAssignStmt>(REG.t0, REG.t1, std::make_shared<TiggerNum>(offset)));
+            inits.push_back(std::make_shared<TiggerAssignStmt>(REG.t2, std::make_shared<TiggerNum>(num)));
+            inits.push_back(std::make_shared<TiggerAssignStmt>(REG.t1, REG.t2, std::make_shared<TiggerNum>(offset)));
         }
     }
     for (const auto &it:decls)root->push_decl(it.second);
