@@ -34,7 +34,7 @@ void TiggerFunc::dumpRISC(std::ostream &os) const {
     os << "  .type" << ident_ << ", @function" << std::endl;
     os << ident_ << ":" << std::endl;
     int STK = (slot_num / 4 + 1) * 16;
-    if (((-STK) | 0xFFF) ^ 0xFFF) {
+    if (-STK < -2048 || -STK > 2047) {
         os.width(12);
         os << "  li" << "t0, " << -STK << std::endl;
         os.width(12);
@@ -43,7 +43,7 @@ void TiggerFunc::dumpRISC(std::ostream &os) const {
         os.width(12);
         os << "  addi" << "sp, sp, " << -STK << std::endl;
     }
-    if (((STK - 4) | 0xFFF) ^ 0xFFF) {
+    if (-STK < -2048 || -STK > 2047) {
         os.width(12);
         os << "  li" << "t0, " << STK - 4 << std::endl;
         os.width(12);
@@ -64,7 +64,7 @@ void TiggerBinaryStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const 
     auto rhs_num = std::dynamic_pointer_cast<TiggerNum>(rhs_);
     auto rhs = std::dynamic_pointer_cast<TiggerReg>(rhs_);
     if (rhs_num) {
-        if ((op_ == ADD || op_ == LESS) && ((rhs_num->num() | 0xFFF) ^ 0xFFF)) {
+        if ((op_ == ADD || op_ == LESS) && (rhs_num->num() < -2048 || rhs_num->num() > 2047)) {
             os.width(12);
             if (op_ == ADD)os << "  addi";
             else os << "  slti";
@@ -147,7 +147,7 @@ void TiggerUnaryStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const {
 
 void TiggerAssignStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const {
     if (dst_offset_) {
-        if ((dst_offset_->num() | 0xFFF) ^ 0xFFF) {
+        if (dst_offset_->num() < -2048 || dst_offset_->num() > 2047) {
             os.width(12);
             os << "  li" << "t0, " << dst_offset_->num() << std::endl;
             os.width(12);
@@ -159,7 +159,7 @@ void TiggerAssignStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const 
             os << "  sw" << val_->name() << ", " << dst_offset_->num() << "(" << dst_->name() << ")" << std::endl;
         }
     } else if (val_offset_) {
-        if ((val_offset_->num() | 0xFFF) ^ 0xFFF) {
+        if (val_offset_->num() < -2048 || val_offset_->num() > 2047) {
             os.width(12);
             os << "  li" << "t0, " << val_offset_->num() << std::endl;
             os.width(12);
@@ -220,7 +220,7 @@ void TiggerFunCall::dumpRISC(std::ostream &os, const TiggerFunc *func) const {
 
 void TiggerReturnStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const {
     int STK = (func->slot_num / 4 + 1) * 16;
-    if (((STK - 4) | 0xFFF) ^ 0xFFF) {
+    if (STK - 4 < -2048 || STK - 4 > 2047) {
         os.width(12);
         os << "  li" << "t0, " << STK - 4 << std::endl;
         os.width(12);
@@ -231,7 +231,7 @@ void TiggerReturnStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const 
         os.width(12);
         os << "  lw" << "ra, " << STK - 4 << "(sp)" << std::endl;
     }
-    if ((STK | 0xFFF) ^ 0xFFF) {
+    if (STK < -2048 || STK > 2047) {
         os.width(12);
         os << "  li" << "t0, " << STK << std::endl;
         os.width(12);
@@ -244,7 +244,7 @@ void TiggerReturnStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const 
 }
 
 void TiggerStoreStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const {
-    if ((offset_->num() | 0x3FF) ^ 0x3FF) {
+    if (offset_->num() < -512 || offset_->num() > 511) {
         os.width(12);
         os << "  li" << "t0, " << offset_->num() * 4 << std::endl;
         os.width(12);
@@ -267,7 +267,7 @@ void TiggerLoadStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const {
         return;
     }
     auto offset = std::dynamic_pointer_cast<TiggerNum>(from_)->num();
-    if ((offset | 0x3FF) ^ 0x3FF) {
+    if (offset < -512 || offset > 511) {
         os.width(12);
         os << "  li" << "t0, " << offset * 4 << std::endl;
         os.width(12);
@@ -288,7 +288,7 @@ void TiggerLoadaddrStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) cons
         return;
     }
     auto offset = std::dynamic_pointer_cast<TiggerNum>(from_)->num();
-    if ((offset | 0x3FF) ^ 0x3FF) {
+    if (offset < -512 || offset > 511) {
         os.width(12);
         os << "  li" << "t0, " << offset * 4 << std::endl;
         os.width(12);
