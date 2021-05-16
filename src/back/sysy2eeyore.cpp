@@ -63,10 +63,14 @@ std::shared_ptr<EeyoreValue> S2ETransformer::generateOn(const SysYNumber *ast) {
 std::shared_ptr<EeyoreValue> S2ETransformer::generateOn(const SysYFunCall *ast) {
     auto *entry = funcs.find(ast->ident());
     if (ast->params().size() != entry->params().size())return logError("function call arguments number mismatch");
+    std::vector<std::shared_ptr<EeyoreValue>> params;
     for (int i = 0; i < ast->params().size(); i++) {
         auto arg = ast->params()[i];
 //        auto param = &entry->params()[i];   // todo: check param
-        auto assign = std::make_shared<EeyoreParamStmt>(arg->genEeyore(this));
+        params.push_back(arg->genEeyore(this));
+    }
+    for (auto param:params) {
+        auto assign = std::make_shared<EeyoreParamStmt>(param);
         func->push_stmt(assign);
     }
     std::shared_ptr<EeyoreTempSymbol> dst = nullptr;
