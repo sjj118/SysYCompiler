@@ -124,7 +124,7 @@ void E2TTransformer::generateOn(const EeyoreReturnStmt *ast) {
 
 void E2TTransformer::generateOn(const EeyoreFunc *ast) {
     func = std::make_shared<TiggerFunc>(ast->ident(), ast->arg_num());
-    if (ast->ident() == "f_main") for (const auto &init:inits)func->push_stmt(init);
+    if (ast->ident() == "main") for (const auto &init:inits)func->push_stmt(init);
     root->push_func(func);
     vars.nest();
     for (int i = 0; i < ast->arg_num(); i++) {

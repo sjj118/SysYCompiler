@@ -34,10 +34,26 @@ void TiggerFunc::dumpRISC(std::ostream &os) const {
     os << "  .type" << ident_ << ", @function" << std::endl;
     os << ident_ << ":" << std::endl;
     int STK = (slot_num / 4 + 1) * 16;
-    os.width(12);
-    os << "  addi" << "sp, sp, " << -STK << std::endl;
-    os.width(12);
-    os << "  sw" << "ra, " << STK - 4 << "(sp)" << std::endl;
+    if (((-STK) | 0xFFF) ^ 0xFFF) {
+        os.width(12);
+        os << "  li" << "t0, " << -STK << std::endl;
+        os.width(12);
+        os << "  add" << "sp, sp, t0" << std::endl;
+    } else {
+        os.width(12);
+        os << "  addi" << "sp, sp, " << -STK << std::endl;
+    }
+    if (((STK - 4) | 0xFFF) ^ 0xFFF) {
+        os.width(12);
+        os << "  li" << "t0, " << STK - 4 << std::endl;
+        os.width(12);
+        os << "  add" << "t0, t0, sp" << std::endl;
+        os.width(12);
+        os << "  sw" << "ra, " << "0(t0)" << std::endl;
+    } else {
+        os.width(12);
+        os << "  sw" << "ra, " << STK - 4 << "(sp)" << std::endl;
+    }
     for (const auto &stmt:stmts_)stmt->dumpRISC(os, this);
     os.width(12);
     os << "  .size" << ident_ << ", .-" << ident_ << std::endl << std::endl;
@@ -135,7 +151,9 @@ void TiggerAssignStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const 
             os.width(12);
             os << "  li" << "t0, " << dst_offset_->num() << std::endl;
             os.width(12);
-            os << "  sw" << val_->name() << ", t0(" << dst_->name() << ")" << std::endl;
+            os << "  add" << "t0, t0, " << dst_->name() << std::endl;
+            os.width(12);
+            os << "  sw" << val_->name() << ", 0(t0)" << std::endl;
         } else {
             os.width(12);
             os << "  sw" << val_->name() << ", " << dst_offset_->num() << "(" << dst_->name() << ")" << std::endl;
@@ -145,7 +163,9 @@ void TiggerAssignStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const 
             os.width(12);
             os << "  li" << "t0, " << val_offset_->num() << std::endl;
             os.width(12);
-            os << "  lw" << dst_->name() << ", t0(" << val_->name() << ")" << std::endl;
+            os << "  add" << "t0, t0, " << val_->name() << std::endl;
+            os.width(12);
+            os << "  lw" << dst_->name() << ", 0(t0)" << std::endl;
         } else {
             os.width(12);
             os << "  lw" << dst_->name() << ", " << val_offset_->num() << "(" << val_->name() << ")" << std::endl;
@@ -164,16 +184,22 @@ void TiggerIfStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const {
     switch (op_) {
         case LESS:
             os << "  blt";
+            break;
         case GREAT:
             os << "  bgt";
+            break;
         case LESSEQ:
             os << "  ble";
+            break;
         case GREATEQ:
             os << "  bge";
+            break;
         case NEQ:
             os << "  bne";
+            break;
         case EQ:
             os << "  beq";
+            break;
     }
     os << lhs_->name() << ", " << rhs_->name() << ", ." << label_->name() << std::endl;
 }
@@ -194,19 +220,37 @@ void TiggerFunCall::dumpRISC(std::ostream &os, const TiggerFunc *func) const {
 
 void TiggerReturnStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const {
     int STK = (func->slot_num / 4 + 1) * 16;
-    os.width(12);
-    os << "  lw" << "ra, " << STK - 4 << "(sp)" << std::endl;
-    os.width(12);
-    os << "  addi" << "sp, sp, " << STK << std::endl;
+    if (((STK - 4) | 0xFFF) ^ 0xFFF) {
+        os.width(12);
+        os << "  li" << "t0, " << STK - 4 << std::endl;
+        os.width(12);
+        os << "  add" << "t0, t0, sp" << std::endl;
+        os.width(12);
+        os << "  lw" << "ra, " << "0(t0)" << std::endl;
+    } else {
+        os.width(12);
+        os << "  lw" << "ra, " << STK - 4 << "(sp)" << std::endl;
+    }
+    if ((STK | 0xFFF) ^ 0xFFF) {
+        os.width(12);
+        os << "  li" << "t0, " << STK << std::endl;
+        os.width(12);
+        os << "  add" << "sp, sp, t0" << std::endl;
+    } else {
+        os.width(12);
+        os << "  addi" << "sp, sp, " << STK << std::endl;
+    }
     os << "  ret" << std::endl;
 }
 
 void TiggerStoreStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const {
     if ((offset_->num() | 0x3FF) ^ 0x3FF) {
         os.width(12);
-        os << "  li" << "t0, " << offset_->num() << std::endl;
+        os << "  li" << "t0, " << offset_->num() * 4 << std::endl;
         os.width(12);
-        os << "  sw" << reg_->name() << ", t0(sp)" << std::endl;
+        os << "  add" << "t0, t0, sp" << std::endl;
+        os.width(12);
+        os << "  sw" << reg_->name() << ", 0(t0)" << std::endl;
     } else {
         os.width(12);
         os << "  sw" << reg_->name() << ", " << offset_->num() * 4 << "(sp)" << std::endl;
@@ -225,9 +269,11 @@ void TiggerLoadStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const {
     auto offset = std::dynamic_pointer_cast<TiggerNum>(from_)->num();
     if ((offset | 0x3FF) ^ 0x3FF) {
         os.width(12);
-        os << "  li" << "t0, " << offset << std::endl;
+        os << "  li" << "t0, " << offset * 4 << std::endl;
         os.width(12);
-        os << "  lw" << reg_->name() << ", t0(sp)" << std::endl;
+        os << "  add" << "t0, t0, sp" << std::endl;
+        os.width(12);
+        os << "  lw" << reg_->name() << ", 0(t0)" << std::endl;
     } else {
         os.width(12);
         os << "  lw" << reg_->name() << ", " << offset * 4 << "(sp)" << std::endl;
@@ -244,7 +290,7 @@ void TiggerLoadaddrStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) cons
     auto offset = std::dynamic_pointer_cast<TiggerNum>(from_)->num();
     if ((offset | 0x3FF) ^ 0x3FF) {
         os.width(12);
-        os << "  li" << "t0, " << offset << std::endl;
+        os << "  li" << "t0, " << offset * 4 << std::endl;
         os.width(12);
         os << "  add" << reg_->name() << ", sp, t0" << std::endl;
     } else {

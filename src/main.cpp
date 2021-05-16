@@ -35,9 +35,6 @@ int main(int argc, const char *argv[]) {
         } else if (strcmp(argv[0], "-o") == 0) {
             arg_cnt = 2;
             output.open(argv[1]);
-        } else if (strcmp(argv[0], "-l") == 0) {
-            arg_cnt = 1;
-            lex = true;
         } else {
             arg_cnt = 1;
             string filename = argv[0];
