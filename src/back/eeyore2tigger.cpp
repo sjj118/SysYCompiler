@@ -134,7 +134,7 @@ void E2TTransformer::generateOn(const EeyoreFunc *ast) {
     }
     for (const auto &decl:ast->decls()) {
         vars.insert(decl->symbol()->name(), E2TSymbolEntry(func->slot_num, decl->size()));
-        func->slot_num += std::max(1, decl->size());
+        func->slot_num += std::max(1, decl->size() / 4);
     }
     for (const auto &stmt:ast->stmts())stmt->genTigger(this);
     vars.unnest();
