@@ -102,8 +102,14 @@ public:
         funcs.insert("putch", putch);
         S2EFuncEntry putarray(true);
         putarray.push_param(S2ESymbolEntry(0, 0, nullptr, false, nullptr));
-        getarray.push_param(S2ESymbolEntry(1, 0, new std::vector<int>(1, 4), false, nullptr));
+        putarray.push_param(S2ESymbolEntry(1, 0, new std::vector<int>(1, 4), false, nullptr));
         funcs.insert("putarray", putarray);
+        S2EFuncEntry starttime(true);
+        starttime.push_param(S2ESymbolEntry(0, 0, nullptr, false, nullptr));
+        funcs.insert("_sysy_starttime", starttime);
+        S2EFuncEntry stoptime(true);
+        stoptime.push_param(S2ESymbolEntry(0, 0, nullptr, false, nullptr));
+        funcs.insert("_sysy_stoptime", stoptime);
     }
 
     std::shared_ptr<EeyoreValue> generateOn(const SysYBinary *ast);

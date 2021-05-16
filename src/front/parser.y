@@ -146,7 +146,19 @@ PrimaryExp: '(' Exp ')' { $$ = $2; }
           ;
 Number: INT_CONST   { $$ = new SysYNumber($1); };
 UnaryExp: PrimaryExp
-        | IDENT '(' ')'             { $$ = new SysYFunCall($1, new std::vector<std::shared_ptr<SysYExpression>>); }
+        | IDENT '(' ')'             {
+                                        if(*$1 == "starttime"){
+                                            auto param = new std::vector<std::shared_ptr<SysYExpression>>;
+                                            param->push_back(std::make_shared<SysYNumber>(yyget_lineno()));
+                                            $$ = new SysYFunCall(new std::string("_sysy_starttime"), param);
+                                            delete $1;
+                                        } else if(*$1 == "stoptime"){
+                                            auto param = new std::vector<std::shared_ptr<SysYExpression>>;
+                                            param->push_back(std::make_shared<SysYNumber>(yyget_lineno()));
+                                            $$ = new SysYFunCall(new std::string("_sysy_stoptime"), param);
+                                            delete $1;
+                                        } else { $$ = new SysYFunCall($1, new std::vector<std::shared_ptr<SysYExpression>>); }
+                                    }
         | IDENT '(' FuncRParams ')' { $$ = new SysYFunCall($1, $3); }
         | ADD UnaryExp              { $$ = new SysYUnary($1, $2); }
         | SUB UnaryExp              { $$ = new SysYUnary($1, $2); }
