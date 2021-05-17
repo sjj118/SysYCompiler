@@ -38,7 +38,7 @@ private:
     std::shared_ptr<TiggerFunc> func;
 #define REG_POINTER(i)  std::shared_ptr<TiggerReg> i = std::make_shared<TiggerReg>(#i);
 
-    struct {
+    const struct {
         TIGGER_REGS(REG_POINTER)
 
         [[nodiscard]] std::shared_ptr<TiggerReg> a(int i) const {

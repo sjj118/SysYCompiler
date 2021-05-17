@@ -86,7 +86,8 @@ private:
     void generateInit(const std::vector<std::shared_ptr<SysYInitVal>> &inits, int dim, const std::vector<int> &stride,
                       std::vector<std::shared_ptr<EeyoreValue>> &dst, int begin, int end);
 
-    bool gotoIfFalse(const std::shared_ptr<SysYExpression>& exp, const std::shared_ptr<EeyoreLabel>& label);
+    std::shared_ptr<EeyoreNumber>
+    gotoIfFalse(const std::shared_ptr<SysYExpression> &exp, const std::shared_ptr<EeyoreLabel> &label);
 
 public:
     S2ETransformer() {
