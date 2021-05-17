@@ -14,3 +14,5 @@ std::string op2str(int op);
 int calc_bin(int op, int lhs, int rhs);
 
 int calc_un(int op, int rhs);
+
+int cmp_not(int op);

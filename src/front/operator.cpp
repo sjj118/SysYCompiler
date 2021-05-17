@@ -46,3 +46,22 @@ int calc_un(int op, int rhs) {
             assert(false);
     }
 }
+
+int cmp_not(int op) {
+    switch (op) {
+        case LESS:
+            return GREATEQ;
+        case GREAT:
+            return LESSEQ;
+        case LESSEQ:
+            return GREAT;
+        case GREATEQ:
+            return LESS;
+        case EQ:
+            return NEQ;
+        case NEQ:
+            return EQ;
+        default:
+            return 0;
+    }
+}

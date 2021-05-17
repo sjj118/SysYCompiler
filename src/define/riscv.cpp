@@ -71,9 +71,12 @@ void TiggerBinaryStmt::dumpRISC(std::ostream &os, const TiggerFunc *func) const 
             os << dst_->name() << ", " << lhs_->name() << ", " << rhs_num->num() << std::endl;
             return;
         } else {
-            os.width(12);
-            os << "  li" << "t0, " << rhs_num->num() << std::endl;
-            rhs = std::make_shared<TiggerReg>("t0");
+            if (rhs_num->num() == 0)rhs = std::make_shared<TiggerReg>("x0");
+            else {
+                os.width(12);
+                os << "  li" << "t0, " << rhs_num->num() << std::endl;
+                rhs = std::make_shared<TiggerReg>("t0");
+            }
         }
     }
     os.width(12);

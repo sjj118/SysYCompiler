@@ -140,22 +140,75 @@ void S2ETransformer::generateOn(const SysYAssignStmt *ast) {
     func->push_stmt(std::make_shared<EeyoreAssignStmt>(symbol, val, offset));
 }
 
+bool S2ETransformer::gotoIfFalse(const std::shared_ptr<SysYExpression> &exp,
+                                 const std::shared_ptr<EeyoreLabel> &label) {
+    auto bin = std::dynamic_pointer_cast<SysYBinary>(exp);
+    if (bin && (bin->op() == LAND || bin->op() == LOR)) {
+        if (bin->op() == LAND) {
+            if (gotoIfFalse(bin->lhs(), label)) {
+                auto cond_num = std::dynamic_pointer_cast<EeyoreNumber>(bin->lhs());
+                if (!cond_num)return true;
+            }
+            return gotoIfFalse(bin->rhs(), label);
+        } else {
+            auto mid_label = std::make_shared<EeyoreLabel>(l_cnt++);
+            auto next_label = std::make_shared<EeyoreLabel>(l_cnt++);
+            if (gotoIfFalse(bin->lhs(), mid_label)) {
+                auto cond_num = std::dynamic_pointer_cast<EeyoreNumber>(bin->lhs());
+                l_cnt -= 2;
+                if (cond_num) return true;
+                else return gotoIfFalse(bin->rhs(), label);
+            }
+            func->push_stmt(std::make_shared<EeyoreGotoStmt>(next_label));
+            func->push_stmt(std::make_shared<EeyoreLabelStmt>(mid_label));
+            if (gotoIfFalse(bin->rhs(), label)) {
+                auto cond_num = std::dynamic_pointer_cast<EeyoreNumber>(bin->rhs());
+                if (cond_num)return true;
+                else func->push_stmt(std::make_shared<EeyoreGotoStmt>(label));
+            }
+            func->push_stmt(std::make_shared<EeyoreLabelStmt>(next_label));
+        }
+    } else if (bin && cmp_not(bin->op())) {
+        auto lhs = bin->lhs()->genEeyore(this);
+        auto rhs = bin->rhs()->genEeyore(this);
+        if (std::dynamic_pointer_cast<EeyoreNumber>(lhs) && std::dynamic_pointer_cast<EeyoreNumber>(rhs))
+            return true;
+        func->push_stmt(std::make_shared<EeyoreIfStmt>(cmp_not(bin->op()), lhs, rhs, label));
+    } else {
+        auto cond = exp->genEeyore(this);
+        auto cond_num = std::dynamic_pointer_cast<EeyoreNumber>(cond);
+        if (cond_num)return true;
+        func->push_stmt(std::make_shared<EeyoreIfStmt>(EQ, cond, std::make_shared<EeyoreNumber>(0), label));
+    }
+    return false;
+}
+
 void S2ETransformer::generateOn(const SysYIfStmt *ast) {
-    auto cond = ast->cond()->genEeyore(this);
     if (ast->else_stmt()) {
         auto else_label = std::make_shared<EeyoreLabel>(l_cnt++);
         auto end_label = std::make_shared<EeyoreLabel>(l_cnt++);
-        func->push_stmt(std::make_shared<EeyoreIfStmt>(EQ, cond, std::make_shared<EeyoreNumber>(0), else_label));
-        ast->then_stmt()->genEeyore(this);
-        func->push_stmt(std::make_shared<EeyoreGotoStmt>(end_label));
-        func->push_stmt(std::make_shared<EeyoreLabelStmt>(else_label));
-        ast->else_stmt()->genEeyore(this);
-        func->push_stmt(std::make_shared<EeyoreLabelStmt>(end_label));
+        if (gotoIfFalse(ast->cond(), else_label)) {
+            l_cnt -= 2;
+            auto cond_num = std::dynamic_pointer_cast<EeyoreNumber>(ast->cond());
+            if (cond_num->num())ast->then_stmt()->genEeyore(this);
+            else ast->else_stmt()->genEeyore(this);
+        } else {
+            ast->then_stmt()->genEeyore(this);
+            func->push_stmt(std::make_shared<EeyoreGotoStmt>(end_label));
+            func->push_stmt(std::make_shared<EeyoreLabelStmt>(else_label));
+            ast->else_stmt()->genEeyore(this);
+            func->push_stmt(std::make_shared<EeyoreLabelStmt>(end_label));
+        }
     } else {
         auto end_label = std::make_shared<EeyoreLabel>(l_cnt++);
-        func->push_stmt(std::make_shared<EeyoreIfStmt>(EQ, cond, std::make_shared<EeyoreNumber>(0), end_label));
-        ast->then_stmt()->genEeyore(this);
-        func->push_stmt(std::make_shared<EeyoreLabelStmt>(end_label));
+        if (gotoIfFalse(ast->cond(), end_label)) {
+            l_cnt -= 1;
+            auto cond_num = std::dynamic_pointer_cast<EeyoreNumber>(ast->cond());
+            if (cond_num->num())ast->then_stmt()->genEeyore(this);
+        } else {
+            ast->then_stmt()->genEeyore(this);
+            func->push_stmt(std::make_shared<EeyoreLabelStmt>(end_label));
+        }
     }
 }
 
@@ -165,8 +218,7 @@ void S2ETransformer::generateOn(const SysYWhileStmt *ast) {
     continue_stack.push(continue_label);
     break_stack.push(break_label);
     func->push_stmt(std::make_shared<EeyoreLabelStmt>(continue_label));
-    auto cond = ast->cond()->genEeyore(this);
-    func->push_stmt(std::make_shared<EeyoreIfStmt>(EQ, cond, std::make_shared<EeyoreNumber>(0), break_label));
+    gotoIfFalse(ast->cond(), break_label);
     ast->stmt()->genEeyore(this);
     func->push_stmt(std::make_shared<EeyoreGotoStmt>(continue_label));
     func->push_stmt(std::make_shared<EeyoreLabelStmt>(break_label));
