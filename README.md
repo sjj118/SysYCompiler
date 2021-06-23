@@ -14,7 +14,7 @@
 
 ### 类图
 
-![class graph](resource/class graph.png)
+![class graph](resource/class_graph.png)
 
 上图显示了 SysY、Eeyore、Tigger 的 AST 结构所用到的类及它们之间的继承关系，这些 AST 都是按照对应语言的文法定义进行实现的。
 
